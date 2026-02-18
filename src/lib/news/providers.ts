@@ -73,7 +73,7 @@ const resolveRedirectUrl = async (url: string) => {
 
 const fetchNaverSearchArticles = async (keyword: string) => {
   const baseUrl = "https://search.naver.com/search.naver";
-  const url = `${baseUrl}?query=${encodeURIComponent(keyword)}&nso=p%3A1w`;
+  const url = `${baseUrl}?query=${encodeURIComponent(keyword)}&nso=p%3A1w&ssc=tab.news.all&where=news&sm=tab_jum`;
 
   try {
     const response = await fetch(url, {
