@@ -29,6 +29,11 @@ export function listKeywords(): Keyword[] {
   return keywordStore.toSorted((a, b) => a.value.localeCompare(b.value))
 }
 
+export function setKeywords(keywords: Keyword[]): Keyword[] {
+  keywordStore.splice(0, keywordStore.length, ...keywords)
+  return listKeywords()
+}
+
 export function addKeyword(value: string): Keyword {
   const keyword: Keyword = {
     id: crypto.randomUUID(),

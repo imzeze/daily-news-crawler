@@ -1,30 +1,13 @@
 import { load } from "cheerio";
 import { fetchRssArticles } from "./rss";
 import type { Article } from "./types";
+import { isBefore } from "date-fns";
 
 export type NewsProvider = "naver" | "google";
 
 export type ProviderResult = {
   provider: NewsProvider;
   articles: Article[];
-};
-
-const normalizeTitle = (value: string) => value.replace(/\s+/g, " ").trim();
-
-const thumbnailKeywords = [
-  "samg",
-  "위시캣",
-  "미니특공대",
-  "메탈카드봇",
-  "티니핑",
-  "마이핑",
-  "myping",
-  "teenieping",
-];
-
-const matchesThumbnailKeyword = (value: string) => {
-  const lower = value.toLowerCase();
-  return thumbnailKeywords.some((keyword) => lower.includes(keyword));
 };
 
 const extractImageUrl = (value?: string) => {
@@ -36,42 +19,50 @@ const extractImageUrl = (value?: string) => {
   return value;
 };
 
+const resolveGoogleUrl = (baseUrl: string, value?: string) => {
+  if (!value) return "";
+  if (value.startsWith("http://") || value.startsWith("https://")) return value;
+  return new URL(value, baseUrl).toString();
+};
+
 const resolveRedirectUrl = async (url: string) => {
   try {
     const response = await fetch(url, {
       method: "HEAD",
-      redirect: "follow",
-      cache: "no-store",
       headers: {
         "user-agent": "daily-news-crawler/1.0",
       },
-    });
-    if (response.ok) return response.url;
-  } catch {
-    // ignore
-  }
-
-  try {
-    const response = await fetch(url, {
       redirect: "follow",
       cache: "no-store",
-      headers: {
-        "user-agent": "daily-news-crawler/1.0",
-      },
     });
-    if (response.ok) return response.url;
-  } catch {
-    // ignore
-  }
 
-  return url;
+    if (response.ok) return response.url;
+
+    if (response.status === 405 || response.status === 403) {
+      const fallback = await fetch(url, {
+        method: "GET",
+        headers: {
+          "user-agent": "daily-news-crawler/1.0",
+        },
+        redirect: "follow",
+        cache: "no-store",
+      });
+      return fallback.url || url;
+    }
+
+    return response.url || url;
+  } catch {
+    return url;
+  }
 };
 
-const fetchGoogleSearchThumbnails = async (keyword: string) => {
+const fetchGoogleSearchArticles = async (keyword: string) => {
   const baseUrl = process.env.GOOGLE_NEWS_SEARCH_BASE;
-  const url = `${baseUrl}/search?q=${encodeURIComponent(keyword)}&hl=ko&gl=KR&ceid=KR:ko`;
+  const url = `${baseUrl}/search?q=${encodeURIComponent(keyword + " when:7d")}&hl=ko&gl=KR&ceid=KR:ko`;
 
   try {
+    if (!baseUrl) return [] as Article[];
+
     const response = await fetch(url, {
       headers: {
         "user-agent": "daily-news-crawler/1.0",
@@ -79,29 +70,66 @@ const fetchGoogleSearchThumbnails = async (keyword: string) => {
       cache: "no-store",
     });
 
-    if (!response.ok) return new Map<string, string>();
+    if (!response.ok) return [] as Article[];
     const html = await response.text();
     const $ = load(html);
-    const thumbnailMap = new Map<string, string>();
+    const $articles = $("c-wiz");
 
-    $("figure img").each((idx, element) => {
-      const node = $(element);
+    const results: Article[] = [];
+    const seen = new Set<string>();
 
+    $articles.each((_, element) => {
+      const $aTag = $(element).find("a[aria-label]");
+      const $time = $(element).find("time").attr("datetime");
+
+      const title = $aTag.text();
+      const [_title, source] =
+        $aTag.attr("aria-label")?.replace(title, "").split(" - ") || [];
+      const href = $aTag.attr("href");
+      if (!href) return;
+      const link = new URL(href, baseUrl).toString();
+
+      if (!title || !source || !link || seen.has(link)) return;
+
+      const imageNode = $(element).find("figure img").first();
       const rawSrc =
-        extractImageUrl(node.attr("src")) ||
-        extractImageUrl(node.attr("data-src")) ||
-        extractImageUrl(node.attr("srcset")) ||
-        extractImageUrl(node.attr("data-srcset"));
-      if (!rawSrc) return;
-      thumbnailMap.set(
-        `${idx}`,
-        `${process.env.GOOGLE_NEWS_SEARCH_BASE}${rawSrc}`,
-      );
+        extractImageUrl(imageNode.attr("src")) ||
+        extractImageUrl(imageNode.attr("data-src")) ||
+        extractImageUrl(imageNode.attr("srcset")) ||
+        extractImageUrl(imageNode.attr("data-srcset"));
+      const imageUrl = resolveGoogleUrl(baseUrl, rawSrc) || undefined;
+
+      results.push({
+        title,
+        url: link,
+        keyword,
+        publishedAt: $time,
+        source,
+        imageUrl,
+      });
+      seen.add(link);
     });
 
-    return thumbnailMap;
+    const resolvedResults = await Promise.all(
+      results.map(async (article) => {
+        if (!article.imageUrl) return article;
+        const redirected = await resolveRedirectUrl(article.imageUrl);
+        return {
+          ...article,
+          imageUrl: redirected || article.imageUrl,
+        };
+      }),
+    );
+
+    return resolvedResults.sort((a, b) =>
+      a.publishedAt && b.publishedAt
+        ? isBefore(a.publishedAt, b.publishedAt)
+          ? 1
+          : -1
+        : -1,
+    );
   } catch {
-    return new Map<string, string>();
+    return [] as Article[];
   }
 };
 
@@ -124,36 +152,7 @@ export async function fetchFromNaver(keyword: string): Promise<ProviderResult> {
 export async function fetchFromGoogle(
   keyword: string,
 ): Promise<ProviderResult> {
-  const baseUrl =
-    process.env.GOOGLE_NEWS_RSS_BASE ?? "https://news.google.com/rss/search?q=";
-  const url = `${baseUrl}${encodeURIComponent(keyword)}&hl=ko&gl=KR&ceid=KR:ko`;
-  const [articles, thumbnails] = await Promise.all([
-    fetchRssArticles({
-      url,
-      keyword,
-      provider: "google",
-    }),
-    fetchGoogleSearchThumbnails(keyword),
-  ]);
-
-  const resolvedThumbnails = new Map<string, string>();
-  await Promise.all(
-    Array.from(thumbnails.entries()).map(async ([key, value]) => {
-      resolvedThumbnails.set(key, await resolveRedirectUrl(value));
-    }),
-  );
-
-  const enrichedArticles = articles.map((article, idx) => {
-    if (article.imageUrl) return article;
-    const match = resolvedThumbnails.get(`${idx}`) ?? thumbnails.get(`${idx}`);
-    return match
-      ? {
-          ...article,
-          imageUrl: match,
-        }
-      : article;
-  });
-
+  const enrichedArticles = await fetchGoogleSearchArticles(keyword);
   return {
     provider: "google",
     articles: enrichedArticles,

@@ -33,8 +33,9 @@ import {
 import { motion } from "framer-motion";
 import { Calendar, ExternalLink, Search } from "lucide-react";
 import useSWR from "swr";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { formatInTimeZone } from "date-fns-tz";
+import { subDays } from "date-fns";
 
 type NewsResponse = {
   articles: {
@@ -55,31 +56,29 @@ type KeywordResponse = {
 
 const MotionCard = motion.div;
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
-const formatKoreaDate = (value?: string) => {
-  if (!value) return "발행일 정보 없음";
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return "발행일 정보 없음";
-  return formatInTimeZone(parsed, "Asia/Seoul", "yyyy-MM-dd HH:mm:ss");
-};
 
 export default function Home() {
-  const {
-    data,
-    error,
-    isLoading,
-    mutate: mutateNews,
-  } = useSWR<NewsResponse>("/api/news", fetcher);
-  const { data: keywordData, mutate: mutateKeywords } = useSWR<KeywordResponse>(
-    "/api/keywords",
-    fetcher,
-  );
-  const articles = data?.articles ?? [];
-  const keywords = keywordData?.keywords ?? [];
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
   const [newKeyword, setNewKeyword] = useState("");
   const [keywordError, setKeywordError] = useState("");
   const [isSavingKeyword, setIsSavingKeyword] = useState(false);
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const { data: keywordData, mutate: mutateKeywords } = useSWR<KeywordResponse>(
+    "/api/keywords",
+    fetcher,
+  );
+  const keywords = keywordData?.keywords ?? [];
+  const activeKeyword = selectedKeywords[0] ?? keywords[0]?.value ?? "";
+  const newsApiUrl = activeKeyword
+    ? `/api/news?keyword=${encodeURIComponent(activeKeyword)}`
+    : "/api/news";
+  const {
+    data,
+    error,
+    isLoading,
+    mutate: mutateNews,
+  } = useSWR<NewsResponse>(newsApiUrl, fetcher);
+  const articles = data?.articles ?? [];
   const filteredArticles =
     selectedKeywords.length === 0
       ? articles
@@ -118,17 +117,18 @@ export default function Home() {
   const handleDeleteKeyword = async (id: string, value: string) => {
     const response = await fetch(`/api/keywords/${id}`, { method: "DELETE" });
     if (response.ok) {
-      setSelectedKeywords((prev) => prev.filter((item) => item !== value));
+      setSelectedKeywords((prev) => {
+        const next = prev.filter((item) => item !== value);
+        if (next.length > 0) return next;
+        const remaining = keywords.filter((keyword) => keyword.value !== value);
+        return remaining.length > 0 ? [remaining[0].value] : [];
+      });
       await Promise.all([mutateKeywords(), mutateNews()]);
     }
   };
 
   const handleToggleKeyword = (value: string) => {
-    setSelectedKeywords((prev) =>
-      prev.includes(value)
-        ? prev.filter((item) => item !== value)
-        : [...prev, value],
-    );
+    setSelectedKeywords([value]);
   };
 
   const clearKeywordFilter = () => {
@@ -137,14 +137,17 @@ export default function Home() {
   };
 
   const handleRemoveKeywordChip = (value: string) => {
-    setSelectedKeywords((prev) => prev.filter((item) => item !== value));
+    setSelectedKeywords([value]);
   };
 
-  const displayedKeywords =
-    selectedKeywords.length === 0
-      ? keywords.map((keyword) => keyword.value)
-      : selectedKeywords;
+  const displayedKeywords = keywords.map((keyword) => keyword.value);
 
+  useEffect(() => {
+    if (keywords.length === 0) return;
+    setSelectedKeywords((prev) =>
+      prev.length === 0 ? [keywords[0].value] : prev,
+    );
+  }, [keywords]);
   return (
     <Container maxW="5xl" className="py-16">
       <Stack spacing={8}>
@@ -179,7 +182,12 @@ export default function Home() {
             <Heading size="md">수집 결과</Heading>
             {data?.collectedAt ? (
               <Text color="gray.500" fontSize="sm">
-                {formatKoreaDate(data.collectedAt)} 기준
+                {formatInTimeZone(
+                  subDays(new Date(), 7),
+                  "Asia/Seoul",
+                  "yyyy-MM-dd",
+                )}
+                ~{formatInTimeZone(new Date(), "Asia/Seoul", "yyyy-MM-dd")} 기준
               </Text>
             ) : null}
           </HStack>
@@ -187,11 +195,24 @@ export default function Home() {
             <Wrap spacing={2}>
               {displayedKeywords.map((keyword) => (
                 <WrapItem key={keyword}>
-                  <Tag colorScheme="purple" variant="solid" borderRadius="full">
+                  <Tag
+                    px="4"
+                    py="2"
+                    colorScheme="purple"
+                    variant={
+                      selectedKeywords.includes(keyword) ? "solid" : "outline"
+                    }
+                    borderRadius="full"
+                    cursor="pointer"
+                    onClick={() => handleToggleKeyword(keyword)}
+                  >
                     <TagLabel>{keyword}</TagLabel>
-                    {selectedKeywords.length > 0 ? (
+                    {selectedKeywords.includes(keyword) ? (
                       <TagCloseButton
-                        onClick={() => handleRemoveKeywordChip(keyword)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleRemoveKeywordChip(keyword);
+                        }}
                       />
                     ) : null}
                   </Tag>
@@ -242,11 +263,16 @@ export default function Home() {
                     </Text>
                     <HStack spacing={2} color="gray.500" fontSize="sm">
                       <Text>{article.source}</Text>
-                      <Text>·</Text>
                     </HStack>
                     <HStack spacing={1}>
                       <Icon as={Calendar} boxSize={4} />
-                      <Text>{formatKoreaDate(article.publishedAt)}</Text>
+                      <Text>
+                        {formatInTimeZone(
+                          article.publishedAt,
+                          "Asia/seoul",
+                          "yyyy-MM-dd",
+                        )}
+                      </Text>
                     </HStack>
                     <Button
                       as="a"
