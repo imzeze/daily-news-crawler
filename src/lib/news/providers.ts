@@ -1,7 +1,6 @@
 import { load } from "cheerio";
-import { fetchRssArticles } from "./rss";
 import type { Article } from "./types";
-import { isBefore } from "date-fns";
+import { isBefore, subDays, subHours, subWeeks } from "date-fns";
 
 export type NewsProvider = "naver" | "google";
 
@@ -9,6 +8,22 @@ export type ProviderResult = {
   provider: NewsProvider;
   articles: Article[];
 };
+
+function getDateFromRelative(text: string, baseDate = new Date()) {
+  const num = parseInt(text, 10);
+
+  if (text.includes("주")) {
+    return subWeeks(baseDate, num);
+  }
+  if (text.includes("일")) {
+    return subDays(baseDate, num);
+  }
+  if (text.includes("시간")) {
+    return subHours(baseDate, num);
+  }
+
+  return baseDate;
+}
 
 const extractImageUrl = (value?: string) => {
   if (!value) return "";
@@ -53,6 +68,71 @@ const resolveRedirectUrl = async (url: string) => {
     return response.url || url;
   } catch {
     return url;
+  }
+};
+
+const fetchNaverSearchArticles = async (keyword: string) => {
+  const baseUrl = "https://search.naver.com/search.naver";
+  const url = `${baseUrl}?query=${encodeURIComponent(keyword)}&nso=p%3A1w`;
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        "user-agent": "daily-news-crawler/1.0",
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) return [] as Article[];
+    const html = await response.text();
+    const $ = load(html);
+    const $articles = $('div[class*="fds-news-item-list"]').children("div");
+    const results: Article[] = [];
+    const seen = new Set<string>();
+
+    $articles.each((_, element) => {
+      const source = $(element)
+        .find('a[data-heatmap-target=".prof"]')
+        .children("span")
+        .text();
+      const atag = $(element).find('a[data-heatmap-target=".tit"]');
+      const info = $(element).find(
+        'div[class*="sds-comps-profile-info-subtexts"]',
+      );
+      const publishedAt = info.children("span").eq(1).text();
+      const title = atag.children("span").text();
+      const href = atag.attr("href");
+      const imageNode = $(element)
+        .find('a[data-heatmap-target=".img"]')
+        .find("img");
+      const rawSrc =
+        extractImageUrl(imageNode.attr("data-src")) ||
+        extractImageUrl(imageNode.attr("src")) ||
+        extractImageUrl(imageNode.attr("data-srcset")) ||
+        extractImageUrl(imageNode.attr("srcset"));
+
+      if (!href || seen.has(href) || !title) return;
+
+      results.push({
+        title,
+        url: href,
+        keyword,
+        publishedAt: `${getDateFromRelative(publishedAt)}`,
+        source,
+        imageUrl: rawSrc || undefined,
+      });
+      seen.add(href);
+    });
+
+    return results.sort((a, b) =>
+      a.publishedAt && b.publishedAt
+        ? isBefore(a.publishedAt, b.publishedAt)
+          ? 1
+          : -1
+        : -1,
+    );
+  } catch {
+    return [] as Article[];
   }
 };
 
@@ -134,15 +214,7 @@ const fetchGoogleSearchArticles = async (keyword: string) => {
 };
 
 export async function fetchFromNaver(keyword: string): Promise<ProviderResult> {
-  const baseUrl =
-    process.env.NAVER_NEWS_RSS_BASE ??
-    "https://news.naver.com/main/rss/search.naver?query=";
-  const url = `${baseUrl}${encodeURIComponent(keyword)}`;
-  const articles = await fetchRssArticles({
-    url,
-    keyword,
-    provider: "naver",
-  });
+  const articles = await fetchNaverSearchArticles(keyword);
   return {
     provider: "naver",
     articles,

@@ -148,6 +148,7 @@ export default function Home() {
       prev.length === 0 ? [keywords[0].value] : prev,
     );
   }, [keywords]);
+
   return (
     <Container maxW="5xl" className="py-16">
       <Stack spacing={8}>
@@ -268,7 +269,7 @@ export default function Home() {
                       <Icon as={Calendar} boxSize={4} />
                       <Text>
                         {formatInTimeZone(
-                          article.publishedAt,
+                          new Date(article.publishedAt),
                           "Asia/seoul",
                           "yyyy-MM-dd",
                         )}
