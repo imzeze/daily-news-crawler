@@ -56,6 +56,13 @@ type KeywordResponse = {
 
 const MotionCard = motion.div;
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const getProviderLabel = (url?: string) => {
+  if (!url) return null;
+  const lower = url.toLowerCase();
+  if (lower.includes("news.google.com")) return "google";
+
+  return "naver";
+};
 
 export default function Home() {
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
@@ -172,9 +179,6 @@ export default function Home() {
             >
               키워드 관리
             </Button>
-            <Button variant="outline" colorScheme="gray">
-              리포트 보기
-            </Button>
           </HStack>
         </MotionCard>
 
@@ -250,15 +254,21 @@ export default function Home() {
                     </Box>
                   )}
                   <Stack spacing={3} p={5}>
-                    <Badge
-                      colorScheme="purple"
-                      variant={
-                        selectedKeywords.length === 0 ? "subtle" : "solid"
-                      }
-                      alignSelf="flex-start"
-                    >
-                      {article.keyword}
-                    </Badge>
+                    <HStack spacing={2} alignSelf="flex-start">
+                      <Badge
+                        colorScheme="purple"
+                        variant={
+                          selectedKeywords.length === 0 ? "subtle" : "solid"
+                        }
+                      >
+                        {article.keyword}
+                      </Badge>
+                      {getProviderLabel(article.url) ? (
+                        <Badge colorScheme="gray" variant="subtle">
+                          {getProviderLabel(article.url)}
+                        </Badge>
+                      ) : null}
+                    </HStack>
                     <Text fontWeight="semibold" noOfLines={2}>
                       {article.title}
                     </Text>
@@ -342,47 +352,51 @@ export default function Home() {
                     선택
                   </Button>
                 </HStack>
-                {keywords.map((keyword) => (
-                  <Box
-                    key={keyword.id}
-                    className="rounded-lg border border-slate-100 bg-slate-50 p-3"
-                  >
-                    <HStack justify="space-between" align="center">
-                      <Stack spacing={1}>
-                        <Text fontWeight="semibold">{keyword.value}</Text>
-                        <Text fontSize="xs" color="gray.500">
-                          {keyword.enabled ? "수집 중" : "비활성"}
-                        </Text>
-                      </Stack>
-                      <HStack>
-                        <Button
-                          size="sm"
-                          variant={
-                            selectedKeywords.includes(keyword.value)
-                              ? "solid"
-                              : "outline"
-                          }
-                          colorScheme="purple"
-                          onClick={() => handleToggleKeyword(keyword.value)}
-                        >
-                          {selectedKeywords.includes(keyword.value)
-                            ? "해제"
-                            : "선택"}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          colorScheme="red"
-                          onClick={() =>
-                            handleDeleteKeyword(keyword.id, keyword.value)
-                          }
-                        >
-                          삭제
-                        </Button>
-                      </HStack>
-                    </HStack>
-                  </Box>
-                ))}
+                <Box maxH="320px" overflowY="auto">
+                  <Stack spacing={3}>
+                    {keywords.map((keyword) => (
+                      <Box
+                        key={keyword.id}
+                        className="rounded-lg border border-slate-100 bg-slate-50 p-3"
+                      >
+                        <HStack justify="space-between" align="center">
+                          <Stack spacing={1}>
+                            <Text fontWeight="semibold">{keyword.value}</Text>
+                            <Text fontSize="xs" color="gray.500">
+                              {keyword.enabled ? "수집 중" : "비활성"}
+                            </Text>
+                          </Stack>
+                          <HStack>
+                            <Button
+                              size="sm"
+                              variant={
+                                selectedKeywords.includes(keyword.value)
+                                  ? "solid"
+                                  : "outline"
+                              }
+                              colorScheme="purple"
+                              onClick={() => handleToggleKeyword(keyword.value)}
+                            >
+                              {selectedKeywords.includes(keyword.value)
+                                ? "해제"
+                                : "선택"}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              colorScheme="red"
+                              onClick={() =>
+                                handleDeleteKeyword(keyword.id, keyword.value)
+                              }
+                            >
+                              삭제
+                            </Button>
+                          </HStack>
+                        </HStack>
+                      </Box>
+                    ))}
+                  </Stack>
+                </Box>
               </Stack>
             </Stack>
           </ModalBody>
