@@ -18,9 +18,10 @@ import {
   ModalBody,
   ModalCloseButton,
   ModalContent,
-  ModalFooter,
   ModalHeader,
   ModalOverlay,
+  Skeleton,
+  SkeletonText,
   SimpleGrid,
   Stack,
   Text,
@@ -63,7 +64,7 @@ const getProviderLabel = (url?: string) => {
 };
 
 export default function HomeClient() {
-  const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
+  const [selectedKeyword, setSelectedKeyword] = useState<string>("");
   const [newKeyword, setNewKeyword] = useState("");
   const [keywordError, setKeywordError] = useState("");
   const [isSavingKeyword, setIsSavingKeyword] = useState(false);
@@ -73,25 +74,33 @@ export default function HomeClient() {
   const { data: keywordData, mutate: mutateKeywords } = useSWR<KeywordResponse>(
     "/api/keywords",
     fetcher,
+    {
+      revalidateOnFocus: false,
+    },
   );
+
   const keywords = keywordData?.keywords ?? [];
-  const activeKeyword = selectedKeywords[0] ?? keywords[0]?.value ?? "";
+  const sortedKeywords = [...keywords].sort((a, b) => {
+    const labelA = getGroupLabel(a.value);
+    const labelB = getGroupLabel(b.value);
+    const orderA = getGroupOrder(labelA);
+    const orderB = getGroupOrder(labelB);
+    if (orderA.tier !== orderB.tier) return orderA.tier - orderB.tier;
+    if (orderA.order !== orderB.order) return orderA.order - orderB.order;
+    return a.value.localeCompare(b.value, "ko");
+  });
+
+  const activeKeyword = selectedKeyword || sortedKeywords[0]?.value || "";
   const newsApiUrl = activeKeyword
     ? `/api/news?keyword=${encodeURIComponent(activeKeyword)}`
-    : "/api/news";
-  const {
-    data,
-    error,
-    isLoading,
-    mutate: mutateNews,
-  } = useSWR<NewsResponse>(newsApiUrl, fetcher);
+    : null;
+  const { data, error, isLoading } = useSWR<NewsResponse>(newsApiUrl, fetcher, {
+    revalidateOnFocus: false,
+  });
   const articles = data?.articles ?? [];
-  const filteredArticles =
-    selectedKeywords.length === 0
-      ? articles
-      : articles.filter((article) =>
-          selectedKeywords.includes(article.keyword),
-        );
+  const filteredArticles = selectedKeyword
+    ? articles.filter((article) => article.keyword === selectedKeyword)
+    : articles;
 
   const handleAddKeyword = async () => {
     if (!newKeyword.trim()) {
@@ -113,9 +122,8 @@ export default function HomeClient() {
         setKeywordError(result.error ?? "키워드 추가에 실패했습니다.");
         return;
       }
-
       setNewKeyword("");
-      await Promise.all([mutateKeywords(), mutateNews()]);
+      await mutateKeywords();
     } finally {
       setIsSavingKeyword(false);
     }
@@ -124,41 +132,26 @@ export default function HomeClient() {
   const handleDeleteKeyword = async (id: string, value: string) => {
     const response = await fetch(`/api/keywords/${id}`, { method: "DELETE" });
     if (response.ok) {
-      setSelectedKeywords((prev) => {
-        const next = prev.filter((item) => item !== value);
-        if (next.length > 0) return next;
+      setSelectedKeyword((prev) => {
+        if (prev !== value) return prev;
         const remaining = keywords.filter((keyword) => keyword.value !== value);
-        return remaining.length > 0 ? [remaining[0].value] : [];
+        return remaining[0]?.value ?? "";
       });
-      await Promise.all([mutateKeywords(), mutateNews()]);
+      await mutateKeywords();
     }
   };
 
   const handleToggleKeyword = (value: string) => {
-    setSelectedKeywords([value]);
+    setSelectedKeyword(value);
   };
 
   const clearKeywordFilter = () => {
-    setSelectedKeywords([]);
-    onClose();
+    setSelectedKeyword("");
   };
-
-  const sortedKeywords = [...keywords].sort((a, b) => {
-    const labelA = getGroupLabel(a.value);
-    const labelB = getGroupLabel(b.value);
-    const orderA = getGroupOrder(labelA);
-    const orderB = getGroupOrder(labelB);
-    if (orderA.tier !== orderB.tier) return orderA.tier - orderB.tier;
-    if (orderA.order !== orderB.order) return orderA.order - orderB.order;
-    return a.value.localeCompare(b.value, "ko");
-  });
-  const displayedKeywords = sortedKeywords.map((keyword) => keyword.value);
 
   useEffect(() => {
     if (sortedKeywords.length === 0) return;
-    setSelectedKeywords((prev) =>
-      prev.length === 0 ? [sortedKeywords[0].value] : prev,
-    );
+    setSelectedKeyword((prev) => (prev ? prev : sortedKeywords[0].value));
   }, [sortedKeywords]);
 
   return (
@@ -251,23 +244,21 @@ export default function HomeClient() {
                     <Button
                       size="sm"
                       justifyContent="flex-start"
-                      variant={
-                        selectedKeywords.length === 0 ? "solid" : "ghost"
-                      }
+                      variant={selectedKeyword ? "ghost" : "solid"}
                       colorScheme="purple"
                       onClick={clearKeywordFilter}
                     >
                       전체 보기
                     </Button>
-                    {displayedKeywords.map((keyword, index) => {
-                      const label = getGroupLabel(keyword);
+                    {sortedKeywords.map(({ value }, index) => {
+                      const label = getGroupLabel(value);
                       const prevLabel =
                         index === 0
                           ? null
-                          : getGroupLabel(displayedKeywords[index - 1]);
+                          : getGroupLabel(sortedKeywords[index - 1].value);
                       const showConsonant = label !== prevLabel;
                       return (
-                        <HStack key={keyword} align="center" spacing={2}>
+                        <HStack key={value} align="center" spacing={2}>
                           <Text
                             w="20px"
                             fontSize="xs"
@@ -281,15 +272,13 @@ export default function HomeClient() {
                             size="sm"
                             justifyContent="flex-start"
                             variant={
-                              selectedKeywords.includes(keyword)
-                                ? "solid"
-                                : "ghost"
+                              selectedKeyword === value ? "solid" : "ghost"
                             }
                             colorScheme="purple"
-                            onClick={() => handleToggleKeyword(keyword)}
+                            onClick={() => handleToggleKeyword(value)}
                             w="full"
                           >
-                            {keyword}
+                            {value}
                           </Button>
                         </HStack>
                       );
@@ -301,7 +290,26 @@ export default function HomeClient() {
 
             <Stack spacing={4} flex="1">
               {isLoading ? (
-                <Text color="gray.500">뉴스 데이터를 불러오는 중입니다.</Text>
+                <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={6}>
+                  {Array.from({ length: 6 }).map((_, idx) => (
+                    <Box
+                      key={`skeleton_${idx}`}
+                      className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                    >
+                      <Skeleton height="180px" />
+                      <Stack spacing={3} p={5}>
+                        <HStack spacing={2} alignSelf="flex-start">
+                          <Skeleton height="20px" width="72px" />
+                          <Skeleton height="20px" width="60px" />
+                        </HStack>
+                        <SkeletonText noOfLines={2} spacing="2" />
+                        <Skeleton height="16px" width="120px" />
+                        <Skeleton height="16px" width="140px" />
+                        <Skeleton height="32px" width="96px" />
+                      </Stack>
+                    </Box>
+                  ))}
+                </SimpleGrid>
               ) : error ? (
                 <Text color="red.500">뉴스 데이터를 불러오지 못했습니다.</Text>
               ) : filteredArticles.length === 0 ? (
@@ -332,9 +340,7 @@ export default function HomeClient() {
                         <HStack spacing={2} alignSelf="flex-start">
                           <Badge
                             colorScheme="purple"
-                            variant={
-                              selectedKeywords.length === 0 ? "subtle" : "solid"
-                            }
+                            variant={selectedKeyword ? "solid" : "subtle"}
                           >
                             {article.keyword}
                           </Badge>
@@ -364,8 +370,9 @@ export default function HomeClient() {
                             {formatInTimeZone(
                               new Date(article.publishedAt),
                               "Asia/seoul",
-                              "yyyy-MM-dd",
+                              "yyyy-MM-dd HH",
                             )}
+                            시
                           </Text>
                         </HStack>
                         <Button

@@ -114,10 +114,25 @@ const fetchNaverSearchArticles = async (
         .children("span")
         .text();
       const atag = $(element).find('a[data-heatmap-target=".tit"]');
-      const info = $(element).find(
-        'div[class*="sds-comps-profile-info-subtexts"]',
-      );
-      const publishedAt = info.children("span").eq(1).text();
+      const info = $(element)
+        .find('div[class*="sds-comps-profile-info-subtext"]')
+        .find('span[class*="sds-comps-profile-info-subtext"]');
+
+      const relativeText = info
+        .eq(0)
+        .find('span[class*="sds-comps-text"]')
+        .text();
+      const absoluteText = info
+        .eq(1)
+        .find('span[class*="sds-comps-text"]')
+        .text();
+      const publishedAt =
+        relativeText.includes("주 전") ||
+        relativeText.includes("일 전") ||
+        relativeText.includes("시간 전")
+          ? relativeText
+          : absoluteText;
+
       const title = atag.children("span").text();
       const href = atag.attr("href");
       const imageNode = $(element)
@@ -174,7 +189,9 @@ const fetchGoogleSearchArticles = async (
     if (!response.ok) return [] as Article[];
     const html = await response.text();
     const $ = load(html);
-    const $articles = $("c-wiz");
+    const $articles = $("c-wiz").filter(
+      (_, el) => $(el).find("c-wiz").length === 0,
+    );
 
     const results: Article[] = [];
     const seen = new Set<string>();
@@ -193,11 +210,7 @@ const fetchGoogleSearchArticles = async (
       if (!title || !source || !link || seen.has(link)) return;
 
       const imageNode = $(element).find("figure img").first();
-      const rawSrc =
-        extractImageUrl(imageNode.attr("src")) ||
-        extractImageUrl(imageNode.attr("data-src")) ||
-        extractImageUrl(imageNode.attr("srcset")) ||
-        extractImageUrl(imageNode.attr("data-srcset"));
+      const rawSrc = extractImageUrl(imageNode.attr("src"));
       const imageUrl = resolveGoogleUrl(baseUrl, rawSrc) || undefined;
 
       results.push({
