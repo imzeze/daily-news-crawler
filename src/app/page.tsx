@@ -22,13 +22,8 @@ import {
   ModalOverlay,
   SimpleGrid,
   Stack,
-  Tag,
-  TagCloseButton,
-  TagLabel,
   Text,
   useDisclosure,
-  Wrap,
-  WrapItem,
 } from "@chakra-ui/react";
 import { motion } from "framer-motion";
 import { Calendar, ExternalLink, Search } from "lucide-react";
@@ -143,10 +138,6 @@ export default function Home() {
     onClose();
   };
 
-  const handleRemoveKeywordChip = (value: string) => {
-    setSelectedKeywords([value]);
-  };
-
   const displayedKeywords = keywords.map((keyword) => keyword.value);
 
   useEffect(() => {
@@ -157,153 +148,179 @@ export default function Home() {
   }, [keywords]);
 
   return (
-    <Container maxW="5xl" className="py-16">
+    <Container maxW="7xl" className="py-16">
       <Stack spacing={8}>
         <Stack spacing={3}>
-          <Heading size="2xl">Daily News Crawler</Heading>
-          <Text color="gray.600" fontSize="lg">
-            SAMG 및 주요 IP 관련 이슈를 매일 자동 수집하고 리스크를 조기
-            탐지합니다.
-          </Text>
+          <div className="flex justify-between items-end">
+            <div>
+              <Heading size="2xl">Daily News Crawler</Heading>
+              <Text color="gray.600" fontSize="lg">
+                SAMG 및 주요 IP 관련 이슈를 매일 자동 수집하고 리스크를 조기
+                탐지합니다.
+              </Text>
+            </div>
+            <div>
+              <HStack justify="space-between" align="center">
+                {data?.collectedAt ? (
+                  <Text color="gray.500" fontSize="sm">
+                    {formatInTimeZone(
+                      subDays(new Date(), 7),
+                      "Asia/Seoul",
+                      "yyyy-MM-dd",
+                    )}
+                    ~{formatInTimeZone(new Date(), "Asia/Seoul", "yyyy-MM-dd")}{" "}
+                    기준
+                  </Text>
+                ) : null}
+              </HStack>
+            </div>
+          </div>
         </Stack>
         <MotionCard
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
         >
-          <HStack spacing={3} justifyContent="flex-end">
-            <Button
-              leftIcon={<Search size={16} aria-hidden="true" />}
-              colorScheme="purple"
-              onClick={onOpen}
+          <Stack
+            direction={{ base: "column", lg: "row" }}
+            spacing={{ base: 6, lg: 8 }}
+            align="flex-start"
+          >
+            <Box
+              w={{ base: "full", lg: "260px" }}
+              position={{ base: "static", lg: "sticky" }}
+              top="24px"
+              alignSelf="flex-start"
+              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
             >
-              키워드 관리
-            </Button>
-          </HStack>
-        </MotionCard>
-
-        <Stack spacing={4}>
-          <HStack justify="space-between" align="center">
-            <Heading size="md">수집 결과</Heading>
-            {data?.collectedAt ? (
-              <Text color="gray.500" fontSize="sm">
-                {formatInTimeZone(
-                  subDays(new Date(), 7),
-                  "Asia/Seoul",
-                  "yyyy-MM-dd",
-                )}
-                ~{formatInTimeZone(new Date(), "Asia/Seoul", "yyyy-MM-dd")} 기준
-              </Text>
-            ) : null}
-          </HStack>
-          {displayedKeywords.length > 0 ? (
-            <Wrap spacing={2}>
-              {displayedKeywords.map((keyword) => (
-                <WrapItem key={keyword}>
-                  <Tag
-                    px="4"
-                    py="2"
+              <Stack spacing={4}>
+                <HStack justify="space-between">
+                  <Heading size="sm">키워드</Heading>
+                  <Button
+                    size="xs"
+                    variant="outline"
                     colorScheme="purple"
-                    variant={
-                      selectedKeywords.includes(keyword) ? "solid" : "outline"
-                    }
-                    borderRadius="full"
-                    cursor="pointer"
-                    onClick={() => handleToggleKeyword(keyword)}
+                    leftIcon={<Search size={14} aria-hidden="true" />}
+                    onClick={onOpen}
                   >
-                    <TagLabel>{keyword}</TagLabel>
-                    {selectedKeywords.includes(keyword) ? (
-                      <TagCloseButton
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          handleRemoveKeywordChip(keyword);
-                        }}
-                      />
-                    ) : null}
-                  </Tag>
-                </WrapItem>
-              ))}
-            </Wrap>
-          ) : null}
-          {isLoading ? (
-            <Text color="gray.500">뉴스 데이터를 불러오는 중입니다.</Text>
-          ) : error ? (
-            <Text color="red.500">뉴스 데이터를 불러오지 못했습니다.</Text>
-          ) : filteredArticles.length === 0 ? (
-            <Text color="gray.500">현재 표시할 뉴스가 없습니다.</Text>
-          ) : (
-            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
-              {filteredArticles.map((article, idx) => (
-                <Box
-                  key={`${article.publishedAt}_${idx}`}
-                  className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-lg"
+                    관리
+                  </Button>
+                </HStack>
+                <Stack
+                  spacing={2}
+                  maxH={{ base: "auto", lg: "calc(100vh - 180px)" }}
+                  overflowY={{ base: "visible", lg: "auto" }}
+                  pr={{ base: 0, lg: 2 }}
                 >
-                  {article.imageUrl ? (
-                    <Image
-                      src={article.imageUrl}
-                      alt={article.title}
-                      height="180px"
-                      width="100%"
-                      objectFit="cover"
-                    />
-                  ) : (
-                    <Box className="flex h-[180px] items-center justify-center bg-slate-100">
-                      <Text color="gray.400" fontSize="sm">
-                        이미지 없음
-                      </Text>
-                    </Box>
-                  )}
-                  <Stack spacing={3} p={5}>
-                    <HStack spacing={2} alignSelf="flex-start">
-                      <Badge
-                        colorScheme="purple"
-                        variant={
-                          selectedKeywords.length === 0 ? "subtle" : "solid"
-                        }
-                      >
-                        {article.keyword}
-                      </Badge>
-                      {getProviderLabel(article.url) ? (
-                        <Badge colorScheme="gray" variant="subtle">
-                          {getProviderLabel(article.url)}
-                        </Badge>
-                      ) : null}
-                    </HStack>
-                    <Text fontWeight="semibold" noOfLines={2}>
-                      {article.title}
-                    </Text>
-                    <HStack spacing={2} color="gray.500" fontSize="sm">
-                      <Text>{article.source}</Text>
-                    </HStack>
-                    <HStack spacing={1}>
-                      <Icon as={Calendar} boxSize={4} />
-                      <Text>
-                        {formatInTimeZone(
-                          new Date(article.publishedAt),
-                          "Asia/seoul",
-                          "yyyy-MM-dd",
-                        )}
-                      </Text>
-                    </HStack>
+                  <Button
+                    size="sm"
+                    justifyContent="flex-start"
+                    variant={selectedKeywords.length === 0 ? "solid" : "ghost"}
+                    colorScheme="purple"
+                    onClick={clearKeywordFilter}
+                  >
+                    전체 보기
+                  </Button>
+                  {displayedKeywords.map((keyword) => (
                     <Button
-                      as="a"
-                      href={article.url}
-                      target="_blank"
-                      rel="noreferrer"
+                      key={keyword}
                       size="sm"
-                      variant="outline"
+                      justifyContent="flex-start"
+                      variant={
+                        selectedKeywords.includes(keyword) ? "solid" : "ghost"
+                      }
                       colorScheme="purple"
-                      rightIcon={<Icon as={ExternalLink} boxSize={4} />}
-                      alignSelf="flex-start"
+                      onClick={() => handleToggleKeyword(keyword)}
                     >
-                      기사 열기
+                      {keyword}
                     </Button>
-                  </Stack>
-                </Box>
-              ))}
-            </SimpleGrid>
-          )}
-        </Stack>
+                  ))}
+                </Stack>
+              </Stack>
+            </Box>
+
+            <Stack spacing={4} flex="1">
+              {isLoading ? (
+                <Text color="gray.500">뉴스 데이터를 불러오는 중입니다.</Text>
+              ) : error ? (
+                <Text color="red.500">뉴스 데이터를 불러오지 못했습니다.</Text>
+              ) : filteredArticles.length === 0 ? (
+                <Text color="gray.500">현재 표시할 뉴스가 없습니다.</Text>
+              ) : (
+                <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={6}>
+                  {filteredArticles.map((article, idx) => (
+                    <Box
+                      key={`${article.publishedAt}_${idx}`}
+                      className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-lg"
+                    >
+                      {article.imageUrl ? (
+                        <Image
+                          src={article.imageUrl}
+                          alt={article.title}
+                          height="180px"
+                          width="100%"
+                          objectFit="cover"
+                        />
+                      ) : (
+                        <Box className="flex h-[180px] items-center justify-center bg-slate-100">
+                          <Text color="gray.400" fontSize="sm">
+                            이미지 없음
+                          </Text>
+                        </Box>
+                      )}
+                      <Stack spacing={3} p={5}>
+                        <HStack spacing={2} alignSelf="flex-start">
+                          <Badge
+                            colorScheme="purple"
+                            variant={
+                              selectedKeywords.length === 0 ? "subtle" : "solid"
+                            }
+                          >
+                            {article.keyword}
+                          </Badge>
+                          {getProviderLabel(article.url) ? (
+                            <Badge colorScheme="gray" variant="subtle">
+                              {getProviderLabel(article.url)}
+                            </Badge>
+                          ) : null}
+                        </HStack>
+                        <Text fontWeight="semibold" noOfLines={2}>
+                          {article.title}
+                        </Text>
+                        <HStack spacing={2} color="gray.500" fontSize="sm">
+                          <Text>{article.source}</Text>
+                        </HStack>
+                        <HStack spacing={1}>
+                          <Icon as={Calendar} boxSize={4} />
+                          <Text>
+                            {formatInTimeZone(
+                              new Date(article.publishedAt),
+                              "Asia/seoul",
+                              "yyyy-MM-dd",
+                            )}
+                          </Text>
+                        </HStack>
+                        <Button
+                          as="a"
+                          href={article.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          size="sm"
+                          variant="outline"
+                          colorScheme="purple"
+                          rightIcon={<Icon as={ExternalLink} boxSize={4} />}
+                          alignSelf="flex-start"
+                        >
+                          기사 열기
+                        </Button>
+                      </Stack>
+                    </Box>
+                  ))}
+                </SimpleGrid>
+              )}
+            </Stack>
+          </Stack>
+        </MotionCard>
       </Stack>
       <Modal isOpen={isOpen} onClose={onClose} size="lg">
         <ModalOverlay />
@@ -339,19 +356,6 @@ export default function Home() {
 
               <Stack spacing={3}>
                 <Heading size="sm">필터 선택</Heading>
-                <HStack justify="space-between">
-                  <Text>모든 키워드</Text>
-                  <Button
-                    size="sm"
-                    variant={
-                      selectedKeywords.length === 0 ? "solid" : "outline"
-                    }
-                    colorScheme="purple"
-                    onClick={clearKeywordFilter}
-                  >
-                    선택
-                  </Button>
-                </HStack>
                 <Box maxH="320px" overflowY="auto">
                   <Stack spacing={3}>
                     {keywords.map((keyword) => (
@@ -362,25 +366,8 @@ export default function Home() {
                         <HStack justify="space-between" align="center">
                           <Stack spacing={1}>
                             <Text fontWeight="semibold">{keyword.value}</Text>
-                            <Text fontSize="xs" color="gray.500">
-                              {keyword.enabled ? "수집 중" : "비활성"}
-                            </Text>
                           </Stack>
                           <HStack>
-                            <Button
-                              size="sm"
-                              variant={
-                                selectedKeywords.includes(keyword.value)
-                                  ? "solid"
-                                  : "outline"
-                              }
-                              colorScheme="purple"
-                              onClick={() => handleToggleKeyword(keyword.value)}
-                            >
-                              {selectedKeywords.includes(keyword.value)
-                                ? "해제"
-                                : "선택"}
-                            </Button>
                             <Button
                               size="sm"
                               variant="outline"

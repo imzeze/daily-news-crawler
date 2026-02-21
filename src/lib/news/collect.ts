@@ -10,7 +10,7 @@ export type CollectResult = {
 export async function collectDailyNews(
   requestedKeywords?: string[],
 ): Promise<CollectResult> {
-  const enabledKeywords = listKeywords().filter((keyword) => keyword.enabled);
+  const enabledKeywords = (await listKeywords()).filter((keyword) => keyword.enabled);
   const keywordValues =
     requestedKeywords && requestedKeywords.length > 0
       ? enabledKeywords

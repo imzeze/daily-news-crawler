@@ -1,3 +1,6 @@
+import { promises as fs } from 'fs'
+import path from 'path'
+
 export type Keyword = {
   id: string
   value: string
@@ -8,7 +11,7 @@ export type Keyword = {
 
 const now = () => new Date().toISOString()
 
-const keywordStore: Keyword[] = [
+const DEFAULT_KEYWORDS: Keyword[] = [
   {
     id: 'samg',
     value: 'SAMG엔터',
@@ -25,16 +28,43 @@ const keywordStore: Keyword[] = [
   }
 ]
 
-export function listKeywords(): Keyword[] {
-  return keywordStore.toSorted((a, b) => a.value.localeCompare(b.value))
+const DATA_DIR = path.join(process.cwd(), 'data')
+const DATA_FILE = path.join(DATA_DIR, 'keywords.json')
+
+async function ensureDataFile(): Promise<void> {
+  try {
+    await fs.access(DATA_FILE)
+  } catch {
+    await fs.mkdir(DATA_DIR, { recursive: true })
+    await fs.writeFile(DATA_FILE, JSON.stringify(DEFAULT_KEYWORDS, null, 2), 'utf-8')
+  }
 }
 
-export function setKeywords(keywords: Keyword[]): Keyword[] {
-  keywordStore.splice(0, keywordStore.length, ...keywords)
-  return listKeywords()
+async function readKeywordsFile(): Promise<Keyword[]> {
+  await ensureDataFile()
+  const raw = await fs.readFile(DATA_FILE, 'utf-8')
+  try {
+    const parsed = JSON.parse(raw) as Keyword[]
+    if (Array.isArray(parsed)) return parsed
+  } catch {
+    // fall through to reset file
+  }
+  await fs.writeFile(DATA_FILE, JSON.stringify(DEFAULT_KEYWORDS, null, 2), 'utf-8')
+  return [...DEFAULT_KEYWORDS]
 }
 
-export function addKeyword(value: string): Keyword {
+async function writeKeywordsFile(keywords: Keyword[]): Promise<void> {
+  await fs.mkdir(DATA_DIR, { recursive: true })
+  await fs.writeFile(DATA_FILE, JSON.stringify(keywords, null, 2), 'utf-8')
+}
+
+export async function listKeywords(): Promise<Keyword[]> {
+  const keywords = await readKeywordsFile()
+  return keywords.toSorted((a, b) => a.value.localeCompare(b.value))
+}
+
+export async function addKeyword(value: string): Promise<Keyword> {
+  const keywords = await readKeywordsFile()
   const keyword: Keyword = {
     id: crypto.randomUUID(),
     value,
@@ -43,12 +73,17 @@ export function addKeyword(value: string): Keyword {
     updatedAt: now()
   }
 
-  keywordStore.push(keyword)
+  keywords.push(keyword)
+  await writeKeywordsFile(keywords)
   return keyword
 }
 
-export function updateKeyword(id: string, updates: Partial<Pick<Keyword, 'value' | 'enabled'>>): Keyword | null {
-  const target = keywordStore.find((item) => item.id === id)
+export async function updateKeyword(
+  id: string,
+  updates: Partial<Pick<Keyword, 'value' | 'enabled'>>
+): Promise<Keyword | null> {
+  const keywords = await readKeywordsFile()
+  const target = keywords.find((item) => item.id === id)
   if (!target) return null
 
   if (typeof updates.value === 'string') {
@@ -58,12 +93,17 @@ export function updateKeyword(id: string, updates: Partial<Pick<Keyword, 'value'
     target.enabled = updates.enabled
   }
   target.updatedAt = now()
+
+  await writeKeywordsFile(keywords)
   return target
 }
 
-export function removeKeyword(id: string): boolean {
-  const index = keywordStore.findIndex((item) => item.id === id)
+export async function removeKeyword(id: string): Promise<boolean> {
+  const keywords = await readKeywordsFile()
+  const index = keywords.findIndex((item) => item.id === id)
   if (index === -1) return false
-  keywordStore.splice(index, 1)
+
+  keywords.splice(index, 1)
+  await writeKeywordsFile(keywords)
   return true
 }
