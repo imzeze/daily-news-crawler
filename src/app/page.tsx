@@ -31,6 +31,7 @@ import useSWR from "swr";
 import { useEffect, useState } from "react";
 import { formatInTimeZone } from "date-fns-tz";
 import { subDays } from "date-fns";
+import { getGroupLabel, getGroupOrder } from "@/util/handleKeyword";
 
 type NewsResponse = {
   articles: {
@@ -138,22 +139,33 @@ export default function Home() {
     onClose();
   };
 
-  const displayedKeywords = keywords.map((keyword) => keyword.value);
+  const sortedKeywords = [...keywords].sort((a, b) => {
+    const labelA = getGroupLabel(a.value);
+    const labelB = getGroupLabel(b.value);
+    const orderA = getGroupOrder(labelA);
+    const orderB = getGroupOrder(labelB);
+    if (orderA.tier !== orderB.tier) return orderA.tier - orderB.tier;
+    if (orderA.order !== orderB.order) return orderA.order - orderB.order;
+    return a.value.localeCompare(b.value, "ko");
+  });
+  const displayedKeywords = sortedKeywords.map((keyword) => keyword.value);
 
   useEffect(() => {
-    if (keywords.length === 0) return;
+    if (sortedKeywords.length === 0) return;
     setSelectedKeywords((prev) =>
-      prev.length === 0 ? [keywords[0].value] : prev,
+      prev.length === 0 ? [sortedKeywords[0].value] : prev,
     );
-  }, [keywords]);
+  }, [sortedKeywords]);
 
   return (
-    <Container maxW="7xl" className="py-16">
+    <Container maxW="7xl" className="pb-16 pt-14">
       <Stack spacing={8}>
         <Stack spacing={3}>
           <div className="flex justify-between items-end">
             <div>
-              <Heading size="2xl">Daily News Crawler</Heading>
+              <Heading mb="2" size="2xl">
+                Daily News Crawler
+              </Heading>
               <Text color="gray.600" fontSize="lg">
                 SAMG 및 주요 IP 관련 이슈를 매일 자동 수집하고 리스크를 조기
                 탐지합니다.
@@ -221,20 +233,41 @@ export default function Home() {
                   >
                     전체 보기
                   </Button>
-                  {displayedKeywords.map((keyword) => (
-                    <Button
-                      key={keyword}
-                      size="sm"
-                      justifyContent="flex-start"
-                      variant={
-                        selectedKeywords.includes(keyword) ? "solid" : "ghost"
-                      }
-                      colorScheme="purple"
-                      onClick={() => handleToggleKeyword(keyword)}
-                    >
-                      {keyword}
-                    </Button>
-                  ))}
+                  {displayedKeywords.map((keyword, index) => {
+                    const label = getGroupLabel(keyword);
+                    const prevLabel =
+                      index === 0
+                        ? null
+                        : getGroupLabel(displayedKeywords[index - 1]);
+                    const showConsonant = label !== prevLabel;
+                    return (
+                      <HStack key={keyword} align="center" spacing={2}>
+                        <Text
+                          w="20px"
+                          fontSize="xs"
+                          color="gray.500"
+                          textAlign="center"
+                          flexShrink={0}
+                        >
+                          {showConsonant ? label : ""}
+                        </Text>
+                        <Button
+                          size="sm"
+                          justifyContent="flex-start"
+                          variant={
+                            selectedKeywords.includes(keyword)
+                              ? "solid"
+                              : "ghost"
+                          }
+                          colorScheme="purple"
+                          onClick={() => handleToggleKeyword(keyword)}
+                          w="full"
+                        >
+                          {keyword}
+                        </Button>
+                      </HStack>
+                    );
+                  })}
                 </Stack>
               </Stack>
             </Box>
@@ -279,7 +312,15 @@ export default function Home() {
                             {article.keyword}
                           </Badge>
                           {getProviderLabel(article.url) ? (
-                            <Badge colorScheme="gray" variant="subtle">
+                            <Badge
+                              backgroundColor={
+                                getProviderLabel(article.url) === "naver"
+                                  ? "#65db6b"
+                                  : "#D85140"
+                              }
+                              color="white"
+                              variant="solid"
+                            >
                               {getProviderLabel(article.url)}
                             </Badge>
                           ) : null}

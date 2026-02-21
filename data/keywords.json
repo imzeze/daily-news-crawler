@@ -1,40 +1,5 @@
 [
   {
-    "id": 0,
-    "value": "SAMG",
-    "enabled": true,
-    "createdAt": "2024-01-01T00:00:00.000Z",
-    "updatedAt": "2024-01-01T00:00:00.000Z"
-  },
-  {
-    "id": 1,
-    "value": "티니핑",
-    "enabled": true,
-    "createdAt": "2024-01-01T00:00:00.000Z",
-    "updatedAt": "2024-01-01T00:00:00.000Z"
-  },
-  {
-    "id": 2,
-    "value": "위시캣",
-    "enabled": true,
-    "createdAt": "2024-01-01T00:00:00.000Z",
-    "updatedAt": "2024-01-01T00:00:00.000Z"
-  },
-  {
-    "id": 3,
-    "value": "메탈카드봇",
-    "enabled": true,
-    "createdAt": "2024-01-01T00:00:00.000Z",
-    "updatedAt": "2024-01-01T00:00:00.000Z"
-  },
-  {
-    "id": 4,
-    "value": "마이핑",
-    "enabled": true,
-    "createdAt": "2024-01-01T00:00:00.000Z",
-    "updatedAt": "2024-01-01T00:00:00.000Z"
-  },
-  {
     "id": "305f70a9-ed48-46dd-95bb-7689e88325d8",
     "value": "미니특공대",
     "enabled": true,
@@ -47,5 +12,82 @@
     "enabled": true,
     "createdAt": "2026-02-21T03:13:35.713Z",
     "updatedAt": "2026-02-21T03:13:35.713Z"
+  },
+  {
+    "id": "231f6013-75cd-4273-be72-7306021bbdfe",
+    "value": "더티니핑",
+    "enabled": true,
+    "createdAt": "2026-02-21T03:16:26.562Z",
+    "updatedAt": "2026-02-21T03:16:26.562Z"
+  },
+  {
+    "id": "dfc43dd4-4fff-4b24-b355-10185e8bd721",
+    "value": "이모션캐슬",
+    "enabled": true,
+    "createdAt": "2026-02-21T03:17:01.451Z",
+    "updatedAt": "2026-02-21T03:17:01.451Z"
+  },
+  {
+    "id": "f4b801d4-3819-4695-80b9-efe319d041bf",
+    "value": "SAMG",
+    "enabled": true,
+    "createdAt": "2026-02-21T03:35:45.293Z",
+    "updatedAt": "2026-02-21T03:35:45.293Z"
+  },
+  {
+    "id": "989c1e29-b2db-4227-adbd-005a7c6ad2c2",
+    "value": "마이핑",
+    "enabled": true,
+    "createdAt": "2026-02-21T03:35:52.720Z",
+    "updatedAt": "2026-02-21T03:35:52.720Z"
+  },
+  {
+    "id": "034b6c13-b527-4555-8b35-f0e6159e32b5",
+    "value": "티니핑",
+    "enabled": true,
+    "createdAt": "2026-02-21T03:36:13.601Z",
+    "updatedAt": "2026-02-21T03:36:13.601Z"
+  },
+  {
+    "id": "f4d2f980-d0d9-4f88-a175-89484364a35e",
+    "value": "THETEENIEPING",
+    "enabled": true,
+    "createdAt": "2026-02-21T03:39:50.205Z",
+    "updatedAt": "2026-02-21T03:39:50.205Z"
+  },
+  {
+    "id": "88b86384-ccc3-4391-8871-1840d10a78e0",
+    "value": "teenieping",
+    "enabled": true,
+    "createdAt": "2026-02-21T03:39:56.448Z",
+    "updatedAt": "2026-02-21T03:39:56.448Z"
+  },
+  {
+    "id": "2409fd69-9514-4431-b564-d625f551a127",
+    "value": "metalcardbot",
+    "enabled": true,
+    "createdAt": "2026-02-21T03:40:03.942Z",
+    "updatedAt": "2026-02-21T03:40:03.942Z"
+  },
+  {
+    "id": "0cb07c25-c4d3-4329-9b0f-6618a02ea161",
+    "value": "emotioncastle",
+    "enabled": true,
+    "createdAt": "2026-02-21T03:40:10.283Z",
+    "updatedAt": "2026-02-21T03:40:10.283Z"
+  },
+  {
+    "id": "b41335b0-3891-45b0-b70a-adfcc8277408",
+    "value": "myping",
+    "enabled": true,
+    "createdAt": "2026-02-21T03:40:15.358Z",
+    "updatedAt": "2026-02-21T03:40:15.358Z"
+  },
+  {
+    "id": "04a6002f-64f9-4459-ae0a-90db3210f808",
+    "value": "하츄핑",
+    "enabled": true,
+    "createdAt": "2026-02-21T03:46:11.136Z",
+    "updatedAt": "2026-02-21T03:46:11.136Z"
   }
 ]

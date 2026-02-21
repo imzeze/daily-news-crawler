@@ -10,7 +10,9 @@ export type CollectResult = {
 export async function collectDailyNews(
   requestedKeywords?: string[],
 ): Promise<CollectResult> {
-  const enabledKeywords = (await listKeywords()).filter((keyword) => keyword.enabled);
+  const enabledKeywords = (await listKeywords()).filter(
+    (keyword) => keyword.enabled,
+  );
   const keywordValues =
     requestedKeywords && requestedKeywords.length > 0
       ? enabledKeywords
@@ -22,7 +24,13 @@ export async function collectDailyNews(
     fetchFromGoogle(value),
   ]);
   const results = await Promise.all(tasks);
-  const articles = results.flatMap((result) => result.articles);
+  const articles = results
+    .flatMap((result) => result.articles)
+    .sort((a, b) =>
+      a.publishedAt && b.publishedAt
+        ? new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+        : -1,
+    );
   return {
     articles,
     collectedAt: new Date().toISOString(),

@@ -124,13 +124,7 @@ const fetchNaverSearchArticles = async (keyword: string) => {
       seen.add(href);
     });
 
-    return results.sort((a, b) =>
-      a.publishedAt && b.publishedAt
-        ? isBefore(a.publishedAt, b.publishedAt)
-          ? 1
-          : -1
-        : -1,
-    );
+    return results;
   } catch {
     return [] as Article[];
   }
@@ -201,13 +195,7 @@ const fetchGoogleSearchArticles = async (keyword: string) => {
       }),
     );
 
-    return resolvedResults.sort((a, b) =>
-      a.publishedAt && b.publishedAt
-        ? isBefore(a.publishedAt, b.publishedAt)
-          ? 1
-          : -1
-        : -1,
-    );
+    return resolvedResults;
   } catch {
     return [] as Article[];
   }
