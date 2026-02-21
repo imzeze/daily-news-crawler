@@ -13,6 +13,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const result = await collectDailyNews()
+  const url = new URL(request.url)
+  const onlyToday = url.searchParams.get('onlyToday') === 'true'
+  const result = await collectDailyNews(undefined, { onlyToday })
   return NextResponse.json(result)
 }

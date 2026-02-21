@@ -9,6 +9,7 @@ export type CollectResult = {
 
 export async function collectDailyNews(
   requestedKeywords?: string[],
+  options?: { onlyToday?: boolean },
 ): Promise<CollectResult> {
   const enabledKeywords = (await listKeywords()).filter(
     (keyword) => keyword.enabled,
@@ -20,8 +21,8 @@ export async function collectDailyNews(
           .map((keyword) => keyword.value)
       : enabledKeywords.map((keyword) => keyword.value);
   const tasks = keywordValues.flatMap((value) => [
-    fetchFromNaver(value),
-    fetchFromGoogle(value),
+    fetchFromNaver(value, options),
+    fetchFromGoogle(value, options),
   ]);
   const results = await Promise.all(tasks);
   const articles = results

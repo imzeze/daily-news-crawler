@@ -4,6 +4,7 @@ import {
   Badge,
   Box,
   Button,
+  Collapse,
   Container,
   Divider,
   FormControl,
@@ -23,6 +24,7 @@ import {
   SimpleGrid,
   Stack,
   Text,
+  useBreakpointValue,
   useDisclosure,
 } from "@chakra-ui/react";
 import { motion } from "framer-motion";
@@ -60,11 +62,13 @@ const getProviderLabel = (url?: string) => {
   return "naver";
 };
 
-export default function Home() {
+export default function HomeClient() {
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
   const [newKeyword, setNewKeyword] = useState("");
   const [keywordError, setKeywordError] = useState("");
   const [isSavingKeyword, setIsSavingKeyword] = useState(false);
+  const [isKeywordListOpen, setIsKeywordListOpen] = useState(true);
+  const isDesktop = useBreakpointValue({ base: false, lg: true });
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { data: keywordData, mutate: mutateKeywords } = useSWR<KeywordResponse>(
     "/api/keywords",
@@ -207,68 +211,91 @@ export default function Home() {
             >
               <Stack spacing={4}>
                 <HStack justify="space-between">
-                  <Heading size="sm">키워드</Heading>
-                  <Button
-                    size="xs"
-                    variant="outline"
-                    colorScheme="purple"
-                    leftIcon={<Search size={14} aria-hidden="true" />}
-                    onClick={onOpen}
-                  >
-                    관리
-                  </Button>
+                  <HStack spacing={2}>
+                    <Heading size="sm">키워드</Heading>
+                    {!isKeywordListOpen && !isDesktop && activeKeyword ? (
+                      <Badge colorScheme="purple" variant="subtle">
+                        {activeKeyword}
+                      </Badge>
+                    ) : null}
+                  </HStack>
+                  <HStack spacing={2}>
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      colorScheme="purple"
+                      leftIcon={<Search size={14} aria-hidden="true" />}
+                      onClick={onOpen}
+                    >
+                      관리
+                    </Button>
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      colorScheme="purple"
+                      display={{ base: "inline-flex", lg: "none" }}
+                      onClick={() => setIsKeywordListOpen((prev) => !prev)}
+                    >
+                      {isKeywordListOpen ? "접기" : "펼치기"}
+                    </Button>
+                  </HStack>
                 </HStack>
-                <Stack
-                  spacing={2}
-                  maxH={{ base: "auto", lg: "calc(100vh - 180px)" }}
-                  overflowY={{ base: "visible", lg: "auto" }}
-                  pr={{ base: 0, lg: 2 }}
-                >
-                  <Button
-                    size="sm"
-                    justifyContent="flex-start"
-                    variant={selectedKeywords.length === 0 ? "solid" : "ghost"}
-                    colorScheme="purple"
-                    onClick={clearKeywordFilter}
+                <Collapse in={isDesktop || isKeywordListOpen} animateOpacity>
+                  <Stack
+                    spacing={2}
+                    maxH={{ base: "auto", lg: "calc(100vh - 180px)" }}
+                    overflowY={{ base: "visible", lg: "auto" }}
+                    pr={{ base: 0, lg: 2 }}
+                    pt={{ base: 2, lg: 0 }}
                   >
-                    전체 보기
-                  </Button>
-                  {displayedKeywords.map((keyword, index) => {
-                    const label = getGroupLabel(keyword);
-                    const prevLabel =
-                      index === 0
-                        ? null
-                        : getGroupLabel(displayedKeywords[index - 1]);
-                    const showConsonant = label !== prevLabel;
-                    return (
-                      <HStack key={keyword} align="center" spacing={2}>
-                        <Text
-                          w="20px"
-                          fontSize="xs"
-                          color="gray.500"
-                          textAlign="center"
-                          flexShrink={0}
-                        >
-                          {showConsonant ? label : ""}
-                        </Text>
-                        <Button
-                          size="sm"
-                          justifyContent="flex-start"
-                          variant={
-                            selectedKeywords.includes(keyword)
-                              ? "solid"
-                              : "ghost"
-                          }
-                          colorScheme="purple"
-                          onClick={() => handleToggleKeyword(keyword)}
-                          w="full"
-                        >
-                          {keyword}
-                        </Button>
-                      </HStack>
-                    );
-                  })}
-                </Stack>
+                    <Button
+                      size="sm"
+                      justifyContent="flex-start"
+                      variant={
+                        selectedKeywords.length === 0 ? "solid" : "ghost"
+                      }
+                      colorScheme="purple"
+                      onClick={clearKeywordFilter}
+                    >
+                      전체 보기
+                    </Button>
+                    {displayedKeywords.map((keyword, index) => {
+                      const label = getGroupLabel(keyword);
+                      const prevLabel =
+                        index === 0
+                          ? null
+                          : getGroupLabel(displayedKeywords[index - 1]);
+                      const showConsonant = label !== prevLabel;
+                      return (
+                        <HStack key={keyword} align="center" spacing={2}>
+                          <Text
+                            w="20px"
+                            fontSize="xs"
+                            color="gray.500"
+                            textAlign="center"
+                            flexShrink={0}
+                          >
+                            {showConsonant ? label : ""}
+                          </Text>
+                          <Button
+                            size="sm"
+                            justifyContent="flex-start"
+                            variant={
+                              selectedKeywords.includes(keyword)
+                                ? "solid"
+                                : "ghost"
+                            }
+                            colorScheme="purple"
+                            onClick={() => handleToggleKeyword(keyword)}
+                            w="full"
+                          >
+                            {keyword}
+                          </Button>
+                        </HStack>
+                      );
+                    })}
+                  </Stack>
+                </Collapse>
               </Stack>
             </Box>
 
@@ -368,7 +395,7 @@ export default function Home() {
         <ModalContent>
           <ModalHeader>키워드 관리</ModalHeader>
           <ModalCloseButton />
-          <ModalBody>
+          <ModalBody pb="10">
             <Stack spacing={4}>
               <FormControl>
                 <FormLabel>키워드 추가</FormLabel>
@@ -428,11 +455,6 @@ export default function Home() {
               </Stack>
             </Stack>
           </ModalBody>
-          <ModalFooter>
-            <Button onClick={onClose} variant="ghost">
-              닫기
-            </Button>
-          </ModalFooter>
         </ModalContent>
       </Modal>
     </Container>

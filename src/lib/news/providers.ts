@@ -71,12 +71,30 @@ const resolveRedirectUrl = async (url: string) => {
   }
 };
 
-const fetchNaverSearchArticles = async (keyword: string) => {
-  const baseUrl = "https://search.naver.com/search.naver";
-  const url = `${baseUrl}?query=${encodeURIComponent(keyword)}&nso=p%3A1w&ssc=tab.news.all&where=news&sm=tab_jum`;
+const fetchNaverSearchArticles = async (
+  keyword: string,
+  options?: { onlyToday?: boolean },
+) => {
+  const onlyToday = options?.onlyToday ?? false;
+  const url = new URL("https://search.naver.com/search.naver");
+  url.searchParams.append("ssc", "tab.news.all");
+  url.searchParams.append("query", keyword);
+  url.searchParams.append("sm", "tab_opt");
+  url.searchParams.append("sort", "1");
+  url.searchParams.append("photo", "0");
+  url.searchParams.append("field", "0");
+  url.searchParams.append("pd", onlyToday ? "4" : "1");
+  url.searchParams.append("related", "0");
+  url.searchParams.append("mynews", "0");
+  url.searchParams.append("office_type", "0");
+  url.searchParams.append("office_section_code", "0");
+  url.searchParams.append("nso", onlyToday ? "so:dd,p:1d" : "so:dd,p:1w");
+  url.searchParams.append("is_sug_officeid", "0");
+  url.searchParams.append("office_category", "0");
+  url.searchParams.append("service_area", "0");
 
   try {
-    const response = await fetch(url, {
+    const response = await fetch(url.toString(), {
       headers: {
         "user-agent": "daily-news-crawler/1.0",
       },
@@ -130,12 +148,21 @@ const fetchNaverSearchArticles = async (keyword: string) => {
   }
 };
 
-const fetchGoogleSearchArticles = async (keyword: string) => {
+const fetchGoogleSearchArticles = async (
+  keyword: string,
+  options?: { onlyToday?: boolean },
+) => {
   const baseUrl = process.env.GOOGLE_NEWS_SEARCH_BASE;
-  const url = `${baseUrl}/search?q=${encodeURIComponent(keyword + " when:7d")}&hl=ko&gl=KR&ceid=KR:ko`;
 
   try {
     if (!baseUrl) return [] as Article[];
+
+    const onlyToday = options?.onlyToday ?? false;
+    const url = new URL("/search", baseUrl);
+    url.searchParams.append("q", `${keyword} when:${onlyToday ? "1d" : "7d"}`);
+    url.searchParams.append("hl", "ko");
+    url.searchParams.append("gl", "KR");
+    url.searchParams.append("ceid", "KR:ko");
 
     const response = await fetch(url, {
       headers: {
@@ -201,8 +228,11 @@ const fetchGoogleSearchArticles = async (keyword: string) => {
   }
 };
 
-export async function fetchFromNaver(keyword: string): Promise<ProviderResult> {
-  const articles = await fetchNaverSearchArticles(keyword);
+export async function fetchFromNaver(
+  keyword: string,
+  options?: { onlyToday?: boolean },
+): Promise<ProviderResult> {
+  const articles = await fetchNaverSearchArticles(keyword, options);
   return {
     provider: "naver",
     articles,
@@ -211,8 +241,9 @@ export async function fetchFromNaver(keyword: string): Promise<ProviderResult> {
 
 export async function fetchFromGoogle(
   keyword: string,
+  options?: { onlyToday?: boolean },
 ): Promise<ProviderResult> {
-  const enrichedArticles = await fetchGoogleSearchArticles(keyword);
+  const enrichedArticles = await fetchGoogleSearchArticles(keyword, options);
   return {
     provider: "google",
     articles: enrichedArticles,
