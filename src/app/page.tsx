@@ -241,15 +241,6 @@ export default function HomeClient() {
                     pr={{ base: 0, lg: 2 }}
                     pt={{ base: 2, lg: 0 }}
                   >
-                    <Button
-                      size="sm"
-                      justifyContent="flex-start"
-                      variant={selectedKeyword ? "ghost" : "solid"}
-                      colorScheme="purple"
-                      onClick={clearKeywordFilter}
-                    >
-                      전체 보기
-                    </Button>
                     {sortedKeywords.map(({ value }, index) => {
                       const label = getGroupLabel(value);
                       const prevLabel =
