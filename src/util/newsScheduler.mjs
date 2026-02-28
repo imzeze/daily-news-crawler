@@ -125,7 +125,12 @@ export async function startNewsScheduler() {
     if (!nextRun) {
       nextRun = new Date(now);
       nextRun.setDate(nextRun.getDate() + 1);
-      nextRun.setHours(RUN_HOURS[0], 0, 0, 0);
+      nextRun.setHours(
+        RUN_HOURS[0] - (Number(process.env.TIMEZONE_OFFSET) || 0),
+        0,
+        0,
+        0,
+      );
     }
 
     const delay = Math.max(0, nextRun.getTime() - now.getTime());
