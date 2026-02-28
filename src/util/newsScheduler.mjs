@@ -111,7 +111,7 @@ export async function runNewsSchedulerOnce() {
 export async function startNewsScheduler() {
   const scheduleNextRun = () => {
     const now = new Date(
-      now.getTime() +
+      new Date().getTime() +
         (Number(process.env.TIMEZONE_OFFSET) || 0) * 60 * 60 * 1000,
     );
     let nextRun = null;
