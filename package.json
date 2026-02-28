@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "scheduler:news": "node --env-file=.env src/util/newsScheduler.mjs"
+    "scheduler:news": "sh -c 'if [ \"$NODE_ENV\" = \"production\" ]; then node --env-file=.env.production src/util/newsScheduler.mjs; else node --env-file=.env.development src/util/newsScheduler.mjs; fi'"
   },
   "dependencies": {
     "@chakra-ui/react": "^2.10.4",

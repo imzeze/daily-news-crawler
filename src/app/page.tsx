@@ -1,4 +1,4 @@
-import { format } from "date-fns";
+import { addHours, format } from "date-fns";
 import HomeClient from "./page-client";
 import { listKeywords } from "@/lib/keywords/store";
 
@@ -38,7 +38,10 @@ export default async function Page() {
         return;
       }
 
-      const today = format(new Date(), "yyyy-MM-dd");
+      const today = format(
+        addHours(new Date(), Number(process.env.TIMEZONE_OFFSET) || 0),
+        "yyyy-MM-dd",
+      );
       counts[keyword.value] = data.articles.filter((article) => {
         if (!article || typeof article !== "object") return false;
         const publishedAt = (article as { publishedAt?: string }).publishedAt;

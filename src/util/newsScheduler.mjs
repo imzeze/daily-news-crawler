@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { format } from "date-fns";
+import { addHours, format } from "date-fns";
 
 const RUN_HOURS = [9, 13, 17];
 
@@ -77,7 +77,10 @@ export async function runNewsSchedulerOnce() {
       const response = await callNewsApiForKeyword(baseUrl, keyword);
 
       const data = await response.json();
-      const today = format(new Date(), "yyyy-MM-dd");
+      const today = format(
+        addHours(new Date(), Number(process.env.TIMEZONE_OFFSET) || 0),
+        "yyyy-MM-dd",
+      );
 
       const todayNews = data.articles.filter((article) => {
         if (!article || typeof article !== "object") return false;
