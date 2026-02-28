@@ -110,7 +110,10 @@ export async function runNewsSchedulerOnce() {
 
 export async function startNewsScheduler() {
   const scheduleNextRun = () => {
-    const now = new Date();
+    const now = new Date(
+      now.getTime() +
+        (Number(process.env.TIMEZONE_OFFSET) || 0) * 60 * 60 * 1000,
+    );
     let nextRun = null;
 
     for (const hour of RUN_HOURS) {
@@ -125,12 +128,7 @@ export async function startNewsScheduler() {
     if (!nextRun) {
       nextRun = new Date(now);
       nextRun.setDate(nextRun.getDate() + 1);
-      nextRun.setHours(
-        RUN_HOURS[0] - (Number(process.env.TIMEZONE_OFFSET) || 0),
-        0,
-        0,
-        0,
-      );
+      nextRun.setHours(RUN_HOURS[0], 0, 0, 0);
     }
 
     const delay = Math.max(0, nextRun.getTime() - now.getTime());
