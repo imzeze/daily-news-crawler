@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "scheduler:news": "node --env-file=.env src/util/newsScheduler.mjs"
   },
   "dependencies": {
     "@chakra-ui/react": "^2.10.4",
@@ -33,6 +34,7 @@
     "eslint-config-next": "^14.2.5",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.3",
-    "typescript": "^5.4.5"
+    "typescript": "^5.4.5",
+    "vercel": "^50.25.4"
   }
 }
