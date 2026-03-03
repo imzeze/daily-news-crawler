@@ -1,5 +1,6 @@
 import { listKeywords } from "@/lib/keywords/store";
 import { format } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import HomeClient from "./page-client";
 
 export const dynamic = "force-static";
@@ -39,9 +40,8 @@ export default async function Page() {
       }
 
       const now = new Date();
-      const nowKST = now.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" });
+      const today = formatInTimeZone(now, "Asia/Seoul", "yyyy-MM-dd HH:mm:ss");
 
-      const today = format(nowKST, "yyyy-MM-dd");
       counts[keyword.value] = data.articles.filter((article) => {
         if (!article || typeof article !== "object") return false;
         const publishedAt = (article as { publishedAt?: string }).publishedAt;
