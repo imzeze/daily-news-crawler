@@ -1,6 +1,6 @@
-import { addHours, format } from "date-fns";
-import HomeClient from "./page-client";
 import { listKeywords } from "@/lib/keywords/store";
+import { format } from "date-fns";
+import HomeClient from "./page-client";
 
 export const dynamic = "force-static";
 
@@ -38,10 +38,10 @@ export default async function Page() {
         return;
       }
 
-      const today = format(
-        addHours(new Date(), Number(process.env.TIMEZONE_OFFSET) || 0),
-        "yyyy-MM-dd",
-      );
+      const now = new Date();
+      const nowKST = now.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" });
+
+      const today = format(nowKST, "yyyy-MM-dd");
       counts[keyword.value] = data.articles.filter((article) => {
         if (!article || typeof article !== "object") return false;
         const publishedAt = (article as { publishedAt?: string }).publishedAt;

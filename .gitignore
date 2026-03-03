@@ -2,3 +2,4 @@ node_modules
 .next
 .codex
 .vercel
+.env*.local
