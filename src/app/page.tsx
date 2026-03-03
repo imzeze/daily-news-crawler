@@ -27,7 +27,7 @@ export default async function Page() {
       const url = new URL("/api/news", baseUrl);
       url.searchParams.append("keyword", keyword.value);
 
-      const response = await fetch(url.toString(), { cache: "force-cache" });
+      const response = await fetch(url.toString());
       if (!response.ok) {
         counts[keyword.value] = 0;
         return;
@@ -40,7 +40,7 @@ export default async function Page() {
       }
 
       const now = new Date();
-      const today = formatInTimeZone(now, "Asia/Seoul", "yyyy-MM-dd HH:mm:ss");
+      const today = formatInTimeZone(now, "Asia/Seoul", "yyyy-MM-dd");
 
       counts[keyword.value] = data.articles.filter((article) => {
         if (!article || typeof article !== "object") return false;
