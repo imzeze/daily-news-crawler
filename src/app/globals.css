@@ -13,6 +13,50 @@ body {
   color: #0f172a;
 }
 
+.date-picker-input {
+  width: 100%;
+  min-width: 180px;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.75rem;
+  background: #fff;
+  padding: 0.625rem 0.875rem;
+  color: #0f172a;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.date-picker-input:focus {
+  outline: none;
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 1px #7c3aed;
+}
+
+.react-datepicker {
+  border-color: #e2e8f0;
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
+}
+
+.react-datepicker__header {
+  background: #f8fafc;
+  border-bottom-color: #e2e8f0;
+}
+
+.react-datepicker__day--selected,
+.react-datepicker__day--keyboard-selected,
+.react-datepicker__day--in-range,
+.react-datepicker__day--in-selecting-range {
+  background: #7c3aed;
+  color: #fff;
+}
+
+.react-datepicker__day:hover,
+.react-datepicker__month-text:hover,
+.react-datepicker__quarter-text:hover,
+.react-datepicker__year-text:hover {
+  background: #ede9fe;
+}
+
 *::-webkit-scrollbar {
   width: 6px;
   height: 6px;

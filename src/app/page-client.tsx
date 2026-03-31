@@ -1,5 +1,6 @@
 "use client";
 
+import { formatDateParam } from "@/lib/news/date-range";
 import {
   Accordion,
   AccordionButton,
@@ -11,43 +12,32 @@ import {
   Button,
   Collapse,
   Container,
-  Divider,
-  FormControl,
-  FormLabel,
   Heading,
   HStack,
   IconButton,
-  Input,
   Menu,
   MenuButton,
   MenuItem,
   MenuList,
-  Modal,
-  ModalBody,
-  ModalCloseButton,
-  ModalContent,
-  ModalHeader,
-  ModalOverlay,
-  Select,
   Skeleton,
   Stack,
   Text,
   useBreakpointValue,
-  useDisclosure,
 } from "@chakra-ui/react";
 import { subDays } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
+import { ko } from "date-fns/locale";
 import { motion } from "framer-motion";
 import {
   AlertTriangle,
   ChevronRight,
   Minus,
-  Search,
   Settings2,
   TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import DatePicker from "react-datepicker";
 import useSWR from "swr";
 
 type NewsResponse = {
@@ -66,20 +56,13 @@ type NewsResponse = {
   collectedAt: string;
 };
 
-const CATEGORY_OPTIONS = ["SAMG", "콘텐츠 산업", "구글 영문 검색"] as const;
-type KeywordCategory = (typeof CATEGORY_OPTIONS)[number];
-
 type KeywordResponse = {
   keywords: {
     id: string;
     value: string;
-    category: KeywordCategory;
+    category: string;
     enabled: boolean;
   }[];
-};
-
-type HomeClientProps = {
-  initialKeywordCounts: Record<string, number>;
 };
 
 const MotionCard = motion.div;
@@ -113,16 +96,15 @@ const SENTIMENT_META = {
   },
 } as const;
 
-export default function HomeClient({ initialKeywordCounts }: HomeClientProps) {
+export default function HomeClient() {
   const [selectedKeyword, setSelectedKeyword] = useState<string>("");
-  const [newKeyword, setNewKeyword] = useState("");
-  const [newCategory, setNewCategory] = useState<KeywordCategory>("SAMG");
-  const [keywordError, setKeywordError] = useState("");
-  const [isSavingKeyword, setIsSavingKeyword] = useState(false);
   const [isKeywordListOpen, setIsKeywordListOpen] = useState(true);
+  const [startDate, setStartDate] = useState<Date>(() =>
+    subDays(new Date(), 7),
+  );
+  const [endDate, setEndDate] = useState<Date>(() => new Date());
   const isDesktop = useBreakpointValue({ base: false, lg: true });
-  const { isOpen, onOpen, onClose } = useDisclosure();
-  const { data: keywordData, mutate: mutateKeywords } = useSWR<KeywordResponse>(
+  const { data: keywordData } = useSWR<KeywordResponse>(
     "/api/keywords",
     fetcher,
     {
@@ -132,21 +114,40 @@ export default function HomeClient({ initialKeywordCounts }: HomeClientProps) {
 
   const keywords = keywordData?.keywords ?? [];
   const sortedKeywords = [...keywords].sort((a, b) => {
-    const categoryOrder =
-      CATEGORY_OPTIONS.indexOf(a.category) -
-      CATEGORY_OPTIONS.indexOf(b.category);
-    if (categoryOrder !== 0) return categoryOrder;
+    if (a.category !== b.category) {
+      return a.category.localeCompare(b.category, "ko");
+    }
     return a.value.localeCompare(b.value, "ko");
   });
-  const groupedKeywords = CATEGORY_OPTIONS.map((category) => ({
-    category,
-    keywords: sortedKeywords.filter((keyword) => keyword.category === category),
-  })).filter((group) => group.keywords.length > 0);
+  const groupedKeywords = Object.values(
+    sortedKeywords.reduce<
+      Record<string, { category: string; keywords: typeof sortedKeywords }>
+    >((acc, keyword) => {
+      const group = acc[keyword.category];
+      if (group) {
+        group.keywords.push(keyword);
+      } else {
+        acc[keyword.category] = {
+          category: keyword.category,
+          keywords: [keyword],
+        };
+      }
+      return acc;
+    }, {}),
+  );
 
   const activeKeyword = selectedKeyword || sortedKeywords[0]?.value || "";
-  const newsApiUrl = activeKeyword
-    ? `/api/news?keyword=${encodeURIComponent(activeKeyword)}`
-    : null;
+  const newsApiUrl = useMemo(() => {
+    if (!activeKeyword) return null;
+
+    const params = new URLSearchParams({
+      keyword: activeKeyword,
+      startDate: formatDateParam(startDate),
+      endDate: formatDateParam(endDate),
+    });
+
+    return `/api/news?${params.toString()}`;
+  }, [activeKeyword, endDate, startDate]);
   const { data, error, isLoading } = useSWR<NewsResponse>(newsApiUrl, fetcher, {
     revalidateOnFocus: false,
   });
@@ -155,53 +156,24 @@ export default function HomeClient({ initialKeywordCounts }: HomeClientProps) {
     ? articles.filter((article) => article.keyword === selectedKeyword)
     : articles;
 
-  const handleAddKeyword = async () => {
-    if (!newKeyword.trim()) {
-      setKeywordError("키워드를 입력해 주세요.");
-      return;
-    }
-
-    setIsSavingKeyword(true);
-    setKeywordError("");
-    try {
-      const response = await fetch("/api/keywords", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          value: newKeyword.trim(),
-          category: newCategory,
-        }),
-      });
-
-      if (!response.ok) {
-        const result = await response.json();
-        setKeywordError(result.error ?? "키워드 추가에 실패했습니다.");
-        return;
-      }
-      setNewKeyword("");
-      setNewCategory("SAMG");
-      await mutateKeywords();
-    } finally {
-      setIsSavingKeyword(false);
-    }
-  };
-
-  const handleDeleteKeyword = async (id: string, value: string) => {
-    const response = await fetch(`/api/keywords/${id}`, { method: "DELETE" });
-    if (response.ok) {
-      setSelectedKeyword((prev) => {
-        if (prev !== value) return prev;
-        const remaining = sortedKeywords.filter(
-          (keyword) => keyword.value !== value,
-        );
-        return remaining[0]?.value ?? "";
-      });
-      await mutateKeywords();
-    }
-  };
-
   const handleToggleKeyword = (value: string) => {
     setSelectedKeyword(value);
+  };
+
+  const handleStartDateChange = (date: Date | null) => {
+    if (!date) return;
+    setStartDate(date);
+    if (date > endDate) {
+      setEndDate(date);
+    }
+  };
+
+  const handleEndDateChange = (date: Date | null) => {
+    if (!date) return;
+    setEndDate(date);
+    if (date < startDate) {
+      setStartDate(date);
+    }
   };
 
   useEffect(() => {
@@ -227,12 +199,19 @@ export default function HomeClient({ initialKeywordCounts }: HomeClientProps) {
               <Menu placement="bottom-end">
                 <MenuButton
                   as={IconButton}
-                  aria-label="기사 분석 설정"
+                  aria-label="설정"
                   icon={<Settings2 size={18} aria-hidden="true" />}
                   variant="outline"
                   borderRadius="xl"
                 />
                 <MenuList borderRadius="2xl" py={3} minW="240px" shadow="lg">
+                  <MenuItem
+                    as={Link}
+                    href="/keywords"
+                    icon={<ChevronRight size={16} aria-hidden="true" />}
+                  >
+                    검색 키워드 관리
+                  </MenuItem>
                   <MenuItem
                     as={Link}
                     href="/analysis-keywords"
@@ -242,22 +221,48 @@ export default function HomeClient({ initialKeywordCounts }: HomeClientProps) {
                   </MenuItem>
                 </MenuList>
               </Menu>
-              <HStack justify="space-between" align="center">
-                {data?.collectedAt ? (
-                  <Text color="gray.500" fontSize="sm">
-                    {formatInTimeZone(
-                      subDays(new Date(), 7),
-                      "Asia/Seoul",
-                      "yyyy-MM-dd",
-                    )}
-                    ~{formatInTimeZone(new Date(), "Asia/Seoul", "yyyy-MM-dd")}{" "}
-                    기준
-                  </Text>
-                ) : null}
-              </HStack>
             </div>
           </div>
         </Stack>
+        <Box className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <Stack spacing={4}>
+            <HStack spacing={3} align="flex-end" flexWrap="wrap">
+              <Box display="flex" alignItems="center" gap={2} mr={4}>
+                <Text color="gray.600" fontSize="sm">
+                  시작 날짜
+                </Text>
+                <DatePicker
+                  selected={startDate}
+                  onChange={handleStartDateChange}
+                  selectsStart
+                  startDate={startDate}
+                  endDate={endDate}
+                  maxDate={endDate}
+                  dateFormat="yyyy-MM-dd"
+                  locale={ko}
+                  className="date-picker-input"
+                />
+              </Box>
+              <Box display="flex" alignItems="center" gap={2}>
+                <Text color="gray.600" fontSize="sm">
+                  종료 날짜
+                </Text>
+                <DatePicker
+                  selected={endDate}
+                  onChange={handleEndDateChange}
+                  selectsEnd
+                  startDate={startDate}
+                  endDate={endDate}
+                  minDate={startDate}
+                  maxDate={new Date()}
+                  dateFormat="yyyy-MM-dd"
+                  locale={ko}
+                  className="date-picker-input"
+                />
+              </Box>
+            </HStack>
+          </Stack>
+        </Box>
         <MotionCard
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -286,15 +291,6 @@ export default function HomeClient({ initialKeywordCounts }: HomeClientProps) {
                     ) : null}
                   </HStack>
                   <HStack spacing={2}>
-                    <Button
-                      size="xs"
-                      variant="outline"
-                      colorScheme="purple"
-                      leftIcon={<Search size={14} aria-hidden="true" />}
-                      onClick={onOpen}
-                    >
-                      관리
-                    </Button>
                     <Button
                       size="xs"
                       variant="outline"
@@ -335,41 +331,24 @@ export default function HomeClient({ initialKeywordCounts }: HomeClientProps) {
                           </AccordionButton>
                           <AccordionPanel pt={1} pb={3}>
                             <Stack spacing={2} maxH="160px" overflowY="auto">
-                              {group.keywords.map(({ value }) => {
-                                const keywordCount =
-                                  initialKeywordCounts[value] ?? 0;
-                                return (
-                                  <Button
-                                    key={value}
-                                    size="md"
-                                    padding={2}
-                                    justifyContent="flex-start"
-                                    variant={
-                                      selectedKeyword === value
-                                        ? "solid"
-                                        : "ghost"
-                                    }
-                                    colorScheme="purple"
-                                    onClick={() => handleToggleKeyword(value)}
-                                    w="full"
-                                  >
-                                    <HStack w="full" justify="space-between">
-                                      <Text>{value}</Text>
-                                      {keywordCount > 0 ? (
-                                        <Badge
-                                          rounded={12}
-                                          px={1.5}
-                                          py={0.5}
-                                          colorScheme="red"
-                                          variant="solid"
-                                        >
-                                          {keywordCount}
-                                        </Badge>
-                                      ) : null}
-                                    </HStack>
-                                  </Button>
-                                );
-                              })}
+                              {group.keywords.map(({ value }) => (
+                                <Button
+                                  key={value}
+                                  size="md"
+                                  padding={2}
+                                  justifyContent="flex-start"
+                                  variant={
+                                    selectedKeyword === value
+                                      ? "solid"
+                                      : "ghost"
+                                  }
+                                  colorScheme="purple"
+                                  onClick={() => handleToggleKeyword(value)}
+                                  w="full"
+                                >
+                                  <Text>{value}</Text>
+                                </Button>
+                              ))}
                             </Stack>
                           </AccordionPanel>
                         </AccordionItem>
@@ -403,7 +382,12 @@ export default function HomeClient({ initialKeywordCounts }: HomeClientProps) {
               ) : error ? (
                 <Text color="red.500">뉴스 데이터를 불러오지 못했습니다.</Text>
               ) : filteredArticles.length === 0 ? (
-                <Text color="gray.500">현재 표시할 뉴스가 없습니다.</Text>
+                <>
+                  <Text color="gray.500" mt={4}>
+                    조회 기간 내 "{selectedKeyword}"(으)로 수집된 뉴스가
+                    없습니다.
+                  </Text>
+                </>
               ) : (
                 <Stack
                   spacing={0}
@@ -485,111 +469,6 @@ export default function HomeClient({ initialKeywordCounts }: HomeClientProps) {
           </Stack>
         </MotionCard>
       </Stack>
-      <Modal isOpen={isOpen} onClose={onClose} size="lg">
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>키워드 관리</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody pb="10">
-            <Stack spacing={4}>
-              <FormControl>
-                <FormLabel>키워드 추가</FormLabel>
-                <Stack spacing={3}>
-                  <Select
-                    value={newCategory}
-                    onChange={(event) =>
-                      setNewCategory(event.target.value as KeywordCategory)
-                    }
-                  >
-                    {CATEGORY_OPTIONS.map((category) => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
-                    ))}
-                  </Select>
-                  <HStack align="flex-start">
-                    <Input
-                      value={newKeyword}
-                      onChange={(event) => setNewKeyword(event.target.value)}
-                      placeholder="새 키워드를 입력하세요"
-                    />
-                    <Button
-                      colorScheme="purple"
-                      onClick={handleAddKeyword}
-                      isLoading={isSavingKeyword}
-                    >
-                      추가
-                    </Button>
-                  </HStack>
-                </Stack>
-                {keywordError ? (
-                  <Text color="red.500" fontSize="sm" mt={2}>
-                    {keywordError}
-                  </Text>
-                ) : null}
-              </FormControl>
-
-              <Divider />
-
-              <Stack spacing={3}>
-                <Heading size="sm">필터 선택</Heading>
-                <Box maxH="320px" overflowY="auto">
-                  <Accordion
-                    allowMultiple
-                    defaultIndex={groupedKeywords.map((_, index) => index)}
-                  >
-                    {groupedKeywords.map((group) => (
-                      <AccordionItem key={group.category} mb={3}>
-                        <AccordionButton px={3} py={2}>
-                          <Box flex="1" textAlign="left">
-                            <Heading size="xs" color="gray.500">
-                              {group.category}
-                            </Heading>
-                          </Box>
-                          <AccordionIcon />
-                        </AccordionButton>
-                        <AccordionPanel pt={1} pb={3}>
-                          <Stack spacing={2} maxH="200px" overflowY="auto">
-                            {group.keywords.map((keyword) => (
-                              <Box
-                                key={keyword.id}
-                                className="rounded-lg border border-slate-100 bg-slate-50 p-3"
-                              >
-                                <HStack justify="space-between" align="center">
-                                  <Stack spacing={1}>
-                                    <Text fontWeight="semibold">
-                                      {keyword.value}
-                                    </Text>
-                                  </Stack>
-                                  <HStack>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      colorScheme="red"
-                                      onClick={() =>
-                                        handleDeleteKeyword(
-                                          keyword.id,
-                                          keyword.value,
-                                        )
-                                      }
-                                    >
-                                      삭제
-                                    </Button>
-                                  </HStack>
-                                </HStack>
-                              </Box>
-                            ))}
-                          </Stack>
-                        </AccordionPanel>
-                      </AccordionItem>
-                    ))}
-                  </Accordion>
-                </Box>
-              </Stack>
-            </Stack>
-          </ModalBody>
-        </ModalContent>
-      </Modal>
     </Container>
   );
 }

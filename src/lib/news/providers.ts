@@ -1,7 +1,13 @@
 import { load } from "cheerio";
+import { isValid, parse } from "date-fns";
 import { chromium } from "playwright";
 import type { Article } from "./types";
-import { isBefore, subDays, subHours, subWeeks } from "date-fns";
+import { subDays, subHours, subWeeks } from "date-fns";
+import {
+  getNextDateParam,
+  resolveNewsDateRange,
+  type NewsDateRangeOptions,
+} from "./date-range";
 
 export type NewsProvider = "naver" | "google";
 
@@ -24,6 +30,79 @@ function getDateFromRelative(text: string, baseDate = new Date()) {
   }
 
   return baseDate;
+}
+
+function parseNaverPublishedAt(text: string, baseDate = new Date()) {
+  const normalized = text.trim();
+  if (!normalized) return undefined;
+
+  if (
+    normalized.includes("주 전") ||
+    normalized.includes("일 전") ||
+    normalized.includes("시간 전")
+  ) {
+    return getDateFromRelative(normalized, baseDate).toISOString();
+  }
+
+  const absoluteDateTime = normalized.match(
+    /(\d{4})\.(\d{2})\.(\d{2})\.\s*(오전|오후)\s*(\d{1,2}):(\d{2})/,
+  );
+  if (absoluteDateTime) {
+    const [, year, month, day, meridiem, hourText, minute] = absoluteDateTime;
+    let hour = Number(hourText);
+    if (meridiem === "오후" && hour < 12) hour += 12;
+    if (meridiem === "오전" && hour === 12) hour = 0;
+
+    return new Date(
+      `${year}-${month}-${day}T${String(hour).padStart(2, "0")}:${minute}:00+09:00`,
+    ).toISOString();
+  }
+
+  const absoluteDate = normalized.match(/(\d{4})\.(\d{2})\.(\d{2})\./);
+  if (absoluteDate) {
+    const [, year, month, day] = absoluteDate;
+    return new Date(`${year}-${month}-${day}T00:00:00+09:00`).toISOString();
+  }
+
+  const parsed = parse(normalized, "yyyy.MM.dd. HH:mm", baseDate);
+  if (isValid(parsed)) return parsed.toISOString();
+
+  return undefined;
+}
+
+function getNaverSearchParams(options?: NewsDateRangeOptions) {
+  const { startDate, endDate } = resolveNewsDateRange(options);
+
+  if (startDate && endDate) {
+    const compactStart = startDate.replaceAll("-", "");
+    const compactEnd = endDate.replaceAll("-", "");
+
+    return {
+      de: endDate.replaceAll("-", "."),
+      ds: startDate.replaceAll("-", "."),
+      nso: `so:dd,p:from${compactStart}to${compactEnd},a:all`,
+      pd: "3",
+    };
+  }
+
+  const onlyToday = options?.onlyToday ?? false;
+  return {
+    de: "",
+    ds: "",
+    nso: onlyToday ? "so:dd,p:1d,a:all" : "so:dd,p:1w,a:all",
+    pd: onlyToday ? "4" : "1",
+  };
+}
+
+function getGoogleQuery(keyword: string, options?: NewsDateRangeOptions) {
+  const { startDate, endDate } = resolveNewsDateRange(options);
+
+  if (startDate && endDate) {
+    return `${keyword} after:${startDate} before:${getNextDateParam(endDate)}`;
+  }
+
+  const onlyToday = options?.onlyToday ?? false;
+  return `${keyword} when:${onlyToday ? "24h" : "7d"}`;
 }
 
 const extractImageUrl = (value?: string) => {
@@ -126,7 +205,7 @@ const parseNaverArticles = (
       title,
       url: href,
       keyword,
-      publishedAt: `${getDateFromRelative(publishedAt)}`,
+      publishedAt: parseNaverPublishedAt(publishedAt),
       source,
       imageUrl: rawSrc || undefined,
     });
@@ -139,12 +218,13 @@ const parseNaverArticles = (
 const fetchNaverMoreArticles = async (
   keyword: string,
   start: number,
-  onlyToday: boolean,
+  options?: NewsDateRangeOptions,
 ) => {
+  const searchParams = getNaverSearchParams(options);
   const url = new URL("https://s.search.naver.com/p/newssearch/3/api/tab/more");
   url.searchParams.append("abt", "null");
-  url.searchParams.append("de", "");
-  url.searchParams.append("ds", "");
+  url.searchParams.append("de", searchParams.de);
+  url.searchParams.append("ds", searchParams.ds);
   url.searchParams.append("eid", "");
   url.searchParams.append("field", "0");
   url.searchParams.append("force_original", "");
@@ -159,7 +239,7 @@ const fetchNaverMoreArticles = async (
   );
   url.searchParams.append(
     "nso",
-    onlyToday ? "so:dd,p:1d,a:all" : "so:dd,p:1w,a:all",
+    searchParams.nso,
   );
   url.searchParams.append("nx_and_query", "");
   url.searchParams.append("nx_search_hlquery", "");
@@ -168,7 +248,7 @@ const fetchNaverMoreArticles = async (
   url.searchParams.append("office_category", "0");
   url.searchParams.append("office_section_code", "0");
   url.searchParams.append("office_type", "0");
-  url.searchParams.append("pd", onlyToday ? "4" : "1");
+  url.searchParams.append("pd", searchParams.pd);
   url.searchParams.append("photo", "0");
   url.searchParams.append("query", keyword);
   url.searchParams.append("query_original", "");
@@ -193,9 +273,9 @@ const fetchNaverMoreArticles = async (
 
 const fetchNaverSearchArticles = async (
   keyword: string,
-  options?: { onlyToday?: boolean },
+  options?: NewsDateRangeOptions,
 ) => {
-  const onlyToday = options?.onlyToday ?? false;
+  const searchParams = getNaverSearchParams(options);
   const url = new URL("https://search.naver.com/search.naver");
   url.searchParams.append("ssc", "tab.news.all");
   url.searchParams.append("query", keyword);
@@ -203,15 +283,17 @@ const fetchNaverSearchArticles = async (
   url.searchParams.append("sort", "1");
   url.searchParams.append("photo", "0");
   url.searchParams.append("field", "0");
-  url.searchParams.append("pd", onlyToday ? "4" : "1");
+  url.searchParams.append("pd", searchParams.pd);
   url.searchParams.append("related", "0");
   url.searchParams.append("mynews", "0");
   url.searchParams.append("office_type", "0");
   url.searchParams.append("office_section_code", "0");
-  url.searchParams.append("nso", onlyToday ? "so:dd,p:1d" : "so:dd,p:1w");
+  url.searchParams.append("nso", searchParams.nso);
   url.searchParams.append("is_sug_officeid", "0");
   url.searchParams.append("office_category", "0");
   url.searchParams.append("service_area", "0");
+  url.searchParams.append("ds", searchParams.ds);
+  url.searchParams.append("de", searchParams.de);
 
   try {
     const response = await fetch(url.toString(), {
@@ -231,7 +313,7 @@ const fetchNaverSearchArticles = async (
     let start = results.length + 1;
 
     for (let page = 0; page < MAX_MORE_PAGES; page += 1) {
-      const payload = await fetchNaverMoreArticles(keyword, start, onlyToday);
+      const payload = await fetchNaverMoreArticles(keyword, start, options);
       const contents = payload?.collection?.[0].html;
       if (!contents) break;
 
@@ -286,16 +368,15 @@ async function fetchGoogleSearchHtmlViaPlaywright(url: string) {
 
 const fetchGoogleSearchArticles = async (
   keyword: string,
-  options?: { onlyToday?: boolean },
+  options?: NewsDateRangeOptions,
 ) => {
   const baseUrl = process.env.GOOGLE_NEWS_SEARCH_BASE;
 
   try {
     if (!baseUrl) return [] as Article[];
 
-    const onlyToday = options?.onlyToday ?? false;
     const url = new URL("/search", baseUrl);
-    url.searchParams.append("q", `${keyword} when:${onlyToday ? "24h" : "7d"}`);
+    url.searchParams.append("q", getGoogleQuery(keyword, options));
     url.searchParams.append("hl", "ko");
     url.searchParams.append("gl", "KR");
     url.searchParams.append("ceid", "KR:ko");
@@ -356,7 +437,7 @@ const fetchGoogleSearchArticles = async (
 
 export async function fetchFromNaver(
   keyword: string,
-  options?: { onlyToday?: boolean },
+  options?: NewsDateRangeOptions,
 ): Promise<ProviderResult> {
   const articles = await fetchNaverSearchArticles(keyword, options);
   return {
@@ -367,7 +448,7 @@ export async function fetchFromNaver(
 
 export async function fetchFromGoogle(
   keyword: string,
-  options?: { onlyToday?: boolean },
+  options?: NewsDateRangeOptions,
 ): Promise<ProviderResult> {
   const enrichedArticles = await fetchGoogleSearchArticles(keyword, options);
   return {
