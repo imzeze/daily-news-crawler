@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { removeKeyword, updateKeyword } from '@/lib/keywords/store'
+import { removeKeyword, updateKeyword, type KeywordCategory } from '@/lib/keywords/store'
 
 type Params = {
   params: { id: string }
@@ -8,11 +8,13 @@ type Params = {
 export async function PUT(request: Request, { params }: Params) {
   const body = (await request.json()) as {
     value?: string
+    category?: KeywordCategory
     enabled?: boolean
   }
 
   const keyword = await updateKeyword(params.id, {
     value: body.value,
+    category: body.category,
     enabled: body.enabled
   })
 

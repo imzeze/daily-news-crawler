@@ -1,0 +1,471 @@
+[
+  {
+    "id": "negative-7",
+    "value": "감소",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "positive-4",
+    "value": "개선",
+    "type": "positive",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:37:27.459Z"
+  },
+  {
+    "id": "negative-29",
+    "value": "경고",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "negative-2",
+    "value": "급락",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "negative-10",
+    "value": "논란",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "negative-17",
+    "value": "리콜",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "negative-13",
+    "value": "법적",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "negative-8",
+    "value": "부진",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "negative-24",
+    "value": "불매",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "negative-34",
+    "value": "불안",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "negative-35",
+    "value": "불황",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "negative-12",
+    "value": "비난",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "negative-11",
+    "value": "비판",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "negative-26",
+    "value": "사과",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "negative-14",
+    "value": "소송",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "negative-6",
+    "value": "손실",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "negative-38",
+    "value": "실망",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "negative-4",
+    "value": "악화",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "negative-36",
+    "value": "여파",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "negative-21",
+    "value": "연기",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "negative-9",
+    "value": "우려",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "negative-30",
+    "value": "위기",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "negative-25",
+    "value": "위반",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "negative-28",
+    "value": "적신호",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "negative-5",
+    "value": "적자",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "negative-16",
+    "value": "조사",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "negative-19",
+    "value": "중단",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "negative-22",
+    "value": "지연",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "negative-18",
+    "value": "철수",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "negative-39",
+    "value": "최저",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "negative-32",
+    "value": "추락",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "negative-20",
+    "value": "취소",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "negative-31",
+    "value": "침체",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "negative-37",
+    "value": "타격",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "negative-33",
+    "value": "파문",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "negative-23",
+    "value": "파업",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "negative-3",
+    "value": "폭락",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "negative-1",
+    "value": "하락",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "negative-27",
+    "value": "해명",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "negative-15",
+    "value": "혐의",
+    "type": "negative",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "positive-21",
+    "value": "계약",
+    "type": "positive",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "positive-23",
+    "value": "글로벌",
+    "type": "positive",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "positive-13",
+    "value": "돌파",
+    "type": "positive",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "positive-2",
+    "value": "반등",
+    "type": "positive",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "positive-1",
+    "value": "상승",
+    "type": "positive",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "positive-17",
+    "value": "성공",
+    "type": "positive",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "positive-10",
+    "value": "성장",
+    "type": "positive",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "positive-19",
+    "value": "수상",
+    "type": "positive",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "positive-14",
+    "value": "신기록",
+    "type": "positive",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "positive-28",
+    "value": "실적 개선",
+    "type": "positive",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "positive-8",
+    "value": "열광",
+    "type": "positive",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "positive-18",
+    "value": "인기",
+    "type": "positive",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "positive-27",
+    "value": "적자 탈출",
+    "type": "positive",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "positive-11",
+    "value": "증가",
+    "type": "positive",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "positive-24",
+    "value": "진출",
+    "type": "positive",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "positive-15",
+    "value": "최고",
+    "type": "positive",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "positive-20",
+    "value": "출시",
+    "type": "positive",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "positive-22",
+    "value": "협업",
+    "type": "positive",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "positive-6",
+    "value": "호응",
+    "type": "positive",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "positive-5",
+    "value": "호재",
+    "type": "positive",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "positive-9",
+    "value": "호평",
+    "type": "positive",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "positive-12",
+    "value": "확대",
+    "type": "positive",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "positive-7",
+    "value": "환호",
+    "type": "positive",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "positive-3",
+    "value": "회복",
+    "type": "positive",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "positive-25",
+    "value": "흑자",
+    "type": "positive",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "positive-26",
+    "value": "흑자전환",
+    "type": "positive",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  },
+  {
+    "id": "positive-16",
+    "value": "흥행",
+    "type": "positive",
+    "createdAt": "2026-03-30T08:32:38.254Z",
+    "updatedAt": "2026-03-30T08:32:38.254Z"
+  }
+]

@@ -1,3 +1,5 @@
+export type ArticleSentiment = "positive" | "negative" | "neutral";
+
 export type Article = {
   title?: string;
   source?: string;
@@ -6,4 +8,7 @@ export type Article = {
   keyword?: string;
   summary?: string;
   imageUrl?: string;
+  sentiment?: ArticleSentiment;
+  sentimentReason?: string;
+  matchedKeywords?: string[];
 };
