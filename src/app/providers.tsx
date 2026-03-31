@@ -1,12 +1,12 @@
-'use client'
+"use client";
 
-import { ChakraProvider } from '@chakra-ui/react'
-import type { ReactNode } from 'react'
+import { ChakraProvider } from "@chakra-ui/react";
+import type { ReactNode } from "react";
 
 type ProvidersProps = {
-  children: ReactNode
-}
+  children: ReactNode;
+};
 
 export default function Providers({ children }: ProvidersProps) {
-  return <ChakraProvider>{children}</ChakraProvider>
+  return <ChakraProvider>{children}</ChakraProvider>;
 }

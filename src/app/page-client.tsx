@@ -23,8 +23,9 @@ import {
   Stack,
   Text,
   useBreakpointValue,
+  VStack,
 } from "@chakra-ui/react";
-import { subDays } from "date-fns";
+import { isSameDay, subDays } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { ko } from "date-fns/locale";
 import { motion } from "framer-motion";
@@ -56,6 +57,18 @@ type NewsResponse = {
   collectedAt: string;
 };
 
+type ScrapArticle = {
+  title: string;
+  url: string;
+  publishedAt: string;
+  keyword: string;
+};
+
+type ScrapResponse = {
+  articles: ScrapArticle[];
+  updatedAt?: string | null;
+};
+
 type KeywordResponse = {
   keywords: {
     id: string;
@@ -65,8 +78,21 @@ type KeywordResponse = {
   }[];
 };
 
+type DatePreset = "today" | "3days" | "1week" | null;
+
 const MotionCard = motion.div;
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const fetcher = async (url: string) => {
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error("Request failed");
+  }
+
+  return response.json();
+};
+
+const getScrapKey = (article: { keyword: string; url: string }) =>
+  `${article.keyword}::${article.url}`;
 
 const SENTIMENT_META = {
   positive: {
@@ -103,6 +129,11 @@ export default function HomeClient() {
     subDays(new Date(), 7),
   );
   const [endDate, setEndDate] = useState<Date>(() => new Date());
+  const [activeDatePreset, setActiveDatePreset] = useState<DatePreset>("1week");
+  const [pendingScrapKey, setPendingScrapKey] = useState<string | null>(null);
+  const [scrapErrorMessage, setScrapErrorMessage] = useState<string | null>(
+    null,
+  );
   const isDesktop = useBreakpointValue({ base: false, lg: true });
   const { data: keywordData } = useSWR<KeywordResponse>(
     "/api/keywords",
@@ -151,18 +182,98 @@ export default function HomeClient() {
   const { data, error, isLoading } = useSWR<NewsResponse>(newsApiUrl, fetcher, {
     revalidateOnFocus: false,
   });
+  const {
+    data: scrapData,
+    mutate: mutateScraps,
+    isLoading: isScrapLoading,
+  } = useSWR<ScrapResponse>("/api/scraps", fetcher, {
+    revalidateOnFocus: false,
+  });
   const articles = data?.articles ?? [];
+  const scrappedArticles = scrapData?.articles ?? [];
   const filteredArticles = selectedKeyword
     ? articles.filter((article) => article.keyword === selectedKeyword)
     : articles;
+  const scrappedArticleKeys = useMemo(
+    () => new Set(scrappedArticles.map((article) => getScrapKey(article))),
+    [scrappedArticles],
+  );
+  const groupedScrappedArticles = useMemo(
+    () =>
+      Object.entries(
+        scrappedArticles.reduce<Record<string, ScrapArticle[]>>(
+          (acc, article) => {
+            if (!acc[article.keyword]) {
+              acc[article.keyword] = [];
+            }
+
+            acc[article.keyword].push(article);
+            return acc;
+          },
+          {},
+        ),
+      ).sort(([leftKeyword], [rightKeyword]) =>
+        leftKeyword.localeCompare(rightKeyword, "ko"),
+      ),
+    [scrappedArticles],
+  );
 
   const handleToggleKeyword = (value: string) => {
     setSelectedKeyword(value);
   };
 
+  const handleToggleScrap = async (article: ScrapArticle) => {
+    const payload: ScrapArticle = {
+      title: article.title,
+      url: article.url,
+      publishedAt: article.publishedAt,
+      keyword: article.keyword,
+    };
+    const scrapKey = getScrapKey(payload);
+    const isScrapped = scrappedArticleKeys.has(scrapKey);
+
+    setPendingScrapKey(scrapKey);
+    setScrapErrorMessage(null);
+
+    try {
+      const response = await fetch("/api/scraps", {
+        method: isScrapped ? "DELETE" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update scrap");
+      }
+
+      await mutateScraps();
+    } catch {
+      setScrapErrorMessage("스크랩 저장 상태를 변경하지 못했습니다.");
+    } finally {
+      setPendingScrapKey(null);
+    }
+  };
+
+  const applyDatePreset = (preset: Exclude<DatePreset, null>) => {
+    const today = new Date();
+    const presetStartDate =
+      preset === "today"
+        ? today
+        : preset === "3days"
+          ? subDays(today, 3)
+          : subDays(today, 7);
+
+    setStartDate(presetStartDate);
+    setEndDate(today);
+    setActiveDatePreset(preset);
+  };
+
   const handleStartDateChange = (date: Date | null) => {
     if (!date) return;
     setStartDate(date);
+    setActiveDatePreset(null);
     if (date > endDate) {
       setEndDate(date);
     }
@@ -171,10 +282,32 @@ export default function HomeClient() {
   const handleEndDateChange = (date: Date | null) => {
     if (!date) return;
     setEndDate(date);
+    setActiveDatePreset(null);
     if (date < startDate) {
       setStartDate(date);
     }
   };
+
+  useEffect(() => {
+    const today = new Date();
+
+    if (isSameDay(startDate, today) && isSameDay(endDate, today)) {
+      setActiveDatePreset("today");
+      return;
+    }
+
+    if (isSameDay(startDate, subDays(today, 3)) && isSameDay(endDate, today)) {
+      setActiveDatePreset("3days");
+      return;
+    }
+
+    if (isSameDay(startDate, subDays(today, 7)) && isSameDay(endDate, today)) {
+      setActiveDatePreset("1week");
+      return;
+    }
+
+    setActiveDatePreset(null);
+  }, [endDate, startDate]);
 
   useEffect(() => {
     if (sortedKeywords.length === 0) return;
@@ -182,8 +315,8 @@ export default function HomeClient() {
   }, [sortedKeywords]);
 
   return (
-    <Container maxW="7xl" className="pb-16 pt-14">
-      <Stack spacing={8}>
+    <Container maxW="8xl" className="pb-16 pt-10">
+      <Stack spacing={4}>
         <Stack spacing={3}>
           <div id="title" className="flex justify-between items-start">
             <div>
@@ -203,6 +336,7 @@ export default function HomeClient() {
                   icon={<Settings2 size={18} aria-hidden="true" />}
                   variant="outline"
                   borderRadius="xl"
+                  backgroundColor="white"
                 />
                 <MenuList borderRadius="2xl" py={3} minW="240px" shadow="lg">
                   <MenuItem
@@ -224,13 +358,47 @@ export default function HomeClient() {
             </div>
           </div>
         </Stack>
-        <Box className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <Stack spacing={4}>
-            <HStack spacing={3} align="flex-end" flexWrap="wrap">
-              <Box display="flex" alignItems="center" gap={2} mr={4}>
-                <Text color="gray.600" fontSize="sm">
-                  시작 날짜
-                </Text>
+        <Box className="rounded-[28px] border border-slate-200 bg-white px-6 py-5 shadow-sm">
+          <Stack
+            direction={{ base: "column", "1xl": "row" }}
+            spacing={8}
+            align="center"
+          >
+            <Heading size="sm" color="gray.600">
+              조회기간
+            </Heading>
+            <HStack spacing={3} flexWrap="wrap">
+              {[
+                { key: "today", label: "오늘" },
+                { key: "3days", label: "3일" },
+                { key: "1week", label: "1주일" },
+              ].map((preset) => {
+                const isActive = activeDatePreset === preset.key;
+
+                return (
+                  <Button
+                    key={preset.key}
+                    onClick={() =>
+                      applyDatePreset(preset.key as Exclude<DatePreset, null>)
+                    }
+                    py={2}
+                    px={8}
+                    borderRadius="full"
+                    borderWidth="1px"
+                    borderColor={
+                      isActive ? "var(--chakra-colors-purple-500)" : "gray.200"
+                    }
+                    bg={isActive ? "var(--chakra-colors-purple-500)" : "white"}
+                    color={isActive ? "white" : "gray.900"}
+                    fontSize="sm"
+                  >
+                    {preset.label}
+                  </Button>
+                );
+              })}
+            </HStack>
+            <HStack spacing={3} flexWrap="wrap" align="center">
+              <Box position="relative">
                 <DatePicker
                   selected={startDate}
                   onChange={handleStartDateChange}
@@ -238,15 +406,13 @@ export default function HomeClient() {
                   startDate={startDate}
                   endDate={endDate}
                   maxDate={endDate}
-                  dateFormat="yyyy-MM-dd"
+                  dateFormat="yyyy.MM.dd"
                   locale={ko}
                   className="date-picker-input"
                 />
               </Box>
-              <Box display="flex" alignItems="center" gap={2}>
-                <Text color="gray.600" fontSize="sm">
-                  종료 날짜
-                </Text>
+              <Text color="gray.600">~</Text>
+              <Box position="relative">
                 <DatePicker
                   selected={endDate}
                   onChange={handleEndDateChange}
@@ -255,7 +421,7 @@ export default function HomeClient() {
                   endDate={endDate}
                   minDate={startDate}
                   maxDate={new Date()}
-                  dateFormat="yyyy-MM-dd"
+                  dateFormat="yyyy.MM.dd"
                   locale={ko}
                   className="date-picker-input"
                 />
@@ -269,13 +435,13 @@ export default function HomeClient() {
           transition={{ duration: 0.4 }}
         >
           <Stack
-            direction={{ base: "column", lg: "row" }}
-            spacing={{ base: 6, lg: 8 }}
+            direction={{ base: "column", xl: "row" }}
+            spacing={4}
             align="flex-start"
           >
             <Box
-              w={{ base: "full", lg: "260px" }}
-              position={{ base: "static", lg: "sticky" }}
+              w={{ base: "full", xl: "300px" }}
+              position={{ base: "static", xl: "sticky" }}
               top="24px"
               alignSelf="flex-start"
               className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
@@ -360,6 +526,9 @@ export default function HomeClient() {
             </Box>
 
             <Stack spacing={4} flex="1">
+              {scrapErrorMessage ? (
+                <Text color="red.500">{scrapErrorMessage}</Text>
+              ) : null}
               {isLoading ? (
                 <Stack
                   spacing={0}
@@ -428,6 +597,24 @@ export default function HomeClient() {
                                   </Text>
                                 </HStack>
                               ) : null}
+                              <Button
+                                ml="auto"
+                                size="sm"
+                                variant={
+                                  scrappedArticleKeys.has(getScrapKey(article))
+                                    ? "solid"
+                                    : "outline"
+                                }
+                                colorScheme="purple"
+                                isLoading={
+                                  pendingScrapKey === getScrapKey(article)
+                                }
+                                onClick={() => handleToggleScrap(article)}
+                              >
+                                {scrappedArticleKeys.has(getScrapKey(article))
+                                  ? "스크랩 해제"
+                                  : "스크랩"}
+                              </Button>
                             </HStack>
                             <Text
                               as="a"
@@ -466,6 +653,109 @@ export default function HomeClient() {
                 </Stack>
               )}
             </Stack>
+
+            <Box
+              w={{ base: "full", xl: "360px" }}
+              position={{ base: "static", xl: "sticky" }}
+              top="24px"
+              alignSelf="flex-start"
+              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+            >
+              <Stack spacing={4}>
+                <HStack justify="space-between">
+                  <Heading size="sm">스크랩 기사</Heading>
+                </HStack>
+                {isScrapLoading ? (
+                  <Stack spacing={3}>
+                    {Array.from({ length: 4 }).map((_, idx) => (
+                      <Skeleton
+                        key={`scrap_skeleton_${idx}`}
+                        height="44px"
+                        borderRadius="xl"
+                      />
+                    ))}
+                  </Stack>
+                ) : groupedScrappedArticles.length === 0 ? (
+                  <Text color="gray.500" fontSize="sm">
+                    기사 카드의 스크랩 버튼으로 관심 기사를 저장할 수 있습니다.
+                  </Text>
+                ) : (
+                  <Accordion allowMultiple defaultIndex={[0]}>
+                    {groupedScrappedArticles.map(
+                      ([keyword, keywordArticles]) => (
+                        <AccordionItem key={keyword} border="none" mb={2}>
+                          <AccordionButton
+                            px={3}
+                            py={3}
+                            borderRadius="xl"
+                            className="bg-slate-50"
+                          >
+                            <Box flex="1" textAlign="left">
+                              <Text fontWeight="semibold" color="gray.800">
+                                {keyword}
+                              </Text>
+                              <Text color="gray.500" fontSize="xs">
+                                {keywordArticles.length}건
+                              </Text>
+                            </Box>
+                            <AccordionIcon />
+                          </AccordionButton>
+                          <AccordionPanel px={2} pt={3} pb={1}>
+                            <VStack
+                              spacing={3}
+                              align="stretch"
+                              borderLeft="2px solid"
+                              borderColor="purple.100"
+                              pl={4}
+                            >
+                              {keywordArticles.map((article) => (
+                                <Box
+                                  key={getScrapKey(article)}
+                                  className="rounded-xl border border-slate-200 bg-white px-3 py-3"
+                                >
+                                  <HStack align="flex-start" spacing={2}>
+                                    <Text
+                                      as="a"
+                                      href={article.url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      fontSize="sm"
+                                      fontWeight="medium"
+                                      color="gray.900"
+                                      className="line-clamp-2 flex-1 hover:text-blue-600 hover:underline"
+                                    >
+                                      {article.title}
+                                    </Text>
+                                    <IconButton
+                                      aria-label="스크랩 해제"
+                                      icon={<Text fontSize="sm">x</Text>}
+                                      size="xs"
+                                      variant="ghost"
+                                      colorScheme="gray"
+                                      isLoading={
+                                        pendingScrapKey === getScrapKey(article)
+                                      }
+                                      onClick={() => handleToggleScrap(article)}
+                                    />
+                                  </HStack>
+                                  <Text mt={1} color="gray.500" fontSize="xs">
+                                    {formatInTimeZone(
+                                      new Date(article.publishedAt),
+                                      "Asia/Seoul",
+                                      "yyyy-MM-dd HH:mm",
+                                    )}
+                                  </Text>
+                                </Box>
+                              ))}
+                            </VStack>
+                          </AccordionPanel>
+                        </AccordionItem>
+                      ),
+                    )}
+                  </Accordion>
+                )}
+              </Stack>
+            </Box>
           </Stack>
         </MotionCard>
       </Stack>

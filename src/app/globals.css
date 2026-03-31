@@ -2,10 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+* {
+  scrollbar-width: thin;
+}
+
 html,
 body {
   height: 100%;
-  scrollbar-width: thin;
 }
 
 body {
@@ -58,6 +61,5 @@ body {
 }
 
 *::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: thin;
 }

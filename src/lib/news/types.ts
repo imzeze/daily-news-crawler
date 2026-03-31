@@ -12,3 +12,10 @@ export type Article = {
   sentimentReason?: string;
   matchedKeywords?: string[];
 };
+
+export type ScrappedArticle = {
+  title: string;
+  url: string;
+  publishedAt: string;
+  keyword: string;
+};
