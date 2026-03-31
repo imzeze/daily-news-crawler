@@ -38,8 +38,8 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 const TYPE_META = {
   positive: {
     label: "긍정 키워드",
-    colorScheme: "green",
-    accentClass: "border-emerald-200 bg-emerald-50",
+    colorScheme: "blue",
+    accentClass: "border-sky-200 bg-sky-50",
   },
   negative: {
     label: "부정 키워드",
@@ -115,8 +115,7 @@ export default function AnalysisKeywordsPage() {
           </Button>
           <Heading size="2xl">기사 분석 키워드 관리</Heading>
           <Text color="gray.600" fontSize="lg">
-            자동 분류에 사용하는 긍정/부정 키워드를 직접 추가, 수정, 삭제할 수
-            있습니다.
+            자동 분류에 사용하는 긍정/부정 키워드를 추가, 삭제할 수 있습니다.
           </Text>
         </Stack>
 
@@ -145,7 +144,7 @@ export default function AnalysisKeywordsPage() {
                     placeholder="예: 실적 개선, 악재, 논란"
                   />
                   <Button
-                    colorScheme="blue"
+                    colorScheme="purple"
                     leftIcon={<Plus size={16} aria-hidden="true" />}
                     onClick={handleCreate}
                   >

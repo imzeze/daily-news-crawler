@@ -10,15 +10,24 @@ import {
   Badge,
   Box,
   Button,
+  Checkbox,
   Collapse,
   Container,
   Heading,
   HStack,
   IconButton,
+  Input,
   Menu,
   MenuButton,
   MenuItem,
   MenuList,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  ModalOverlay,
   Skeleton,
   Stack,
   Text,
@@ -31,7 +40,9 @@ import { ko } from "date-fns/locale";
 import { motion } from "framer-motion";
 import {
   AlertTriangle,
+  Bookmark,
   ChevronRight,
+  Mail,
   Minus,
   Settings2,
   TrendingUp,
@@ -69,6 +80,16 @@ type ScrapResponse = {
   updatedAt?: string | null;
 };
 
+type MailRecipient = {
+  id: string;
+  email: string;
+  createdAt: string;
+};
+
+type MailRecipientResponse = {
+  recipients: MailRecipient[];
+};
+
 type KeywordResponse = {
   keywords: {
     id: string;
@@ -99,10 +120,9 @@ const SENTIMENT_META = {
     label: "긍정",
     colorScheme: "green",
     icon: TrendingUp,
-    accentClass: "border-emerald-200 bg-emerald-50",
-    pillClass: "bg-emerald-500 text-white",
-    keywordClass:
-      "border border-emerald-300 bg-white text-emerald-900 shadow-sm",
+    accentClass: "border-sky-200 bg-sky-50",
+    pillClass: "bg-sky-500 text-white",
+    keywordClass: "border border-sky-300 bg-white text-emerald-900 shadow-sm",
   },
   negative: {
     label: "부정",
@@ -134,6 +154,17 @@ export default function HomeClient() {
   const [scrapErrorMessage, setScrapErrorMessage] = useState<string | null>(
     null,
   );
+  const [isMailModalOpen, setIsMailModalOpen] = useState(false);
+  const [selectedMailRecipients, setSelectedMailRecipients] = useState<
+    string[]
+  >([]);
+  const [newMailRecipient, setNewMailRecipient] = useState("");
+  const [mailErrorMessage, setMailErrorMessage] = useState<string | null>(null);
+  const [mailSuccessMessage, setMailSuccessMessage] = useState<string | null>(
+    null,
+  );
+  const [isAddingMailRecipient, setIsAddingMailRecipient] = useState(false);
+  const [isSendingMail, setIsSendingMail] = useState(false);
   const isDesktop = useBreakpointValue({ base: false, lg: true });
   const { data: keywordData } = useSWR<KeywordResponse>(
     "/api/keywords",
@@ -189,8 +220,16 @@ export default function HomeClient() {
   } = useSWR<ScrapResponse>("/api/scraps", fetcher, {
     revalidateOnFocus: false,
   });
+  const {
+    data: recipientData,
+    mutate: mutateRecipients,
+    isLoading: isRecipientLoading,
+  } = useSWR<MailRecipientResponse>("/api/scrap-emails", fetcher, {
+    revalidateOnFocus: false,
+  });
   const articles = data?.articles ?? [];
   const scrappedArticles = scrapData?.articles ?? [];
+  const mailRecipients = recipientData?.recipients ?? [];
   const filteredArticles = selectedKeyword
     ? articles.filter((article) => article.keyword === selectedKeyword)
     : articles;
@@ -314,6 +353,119 @@ export default function HomeClient() {
     setSelectedKeyword((prev) => (prev ? prev : sortedKeywords[0].value));
   }, [sortedKeywords]);
 
+  useEffect(() => {
+    if (!isMailModalOpen) return;
+    setSelectedMailRecipients(
+      mailRecipients.map((recipient) => recipient.email),
+    );
+  }, [isMailModalOpen, mailRecipients]);
+
+  const openMailModal = () => {
+    setMailErrorMessage(null);
+    setMailSuccessMessage(null);
+    setNewMailRecipient("");
+    setSelectedMailRecipients(
+      mailRecipients.map((recipient) => recipient.email),
+    );
+    setIsMailModalOpen(true);
+  };
+
+  const closeMailModal = () => {
+    setIsMailModalOpen(false);
+    setMailErrorMessage(null);
+    setMailSuccessMessage(null);
+    setNewMailRecipient("");
+  };
+
+  const handleToggleMailRecipient = (email: string) => {
+    setSelectedMailRecipients((prev) =>
+      prev.includes(email)
+        ? prev.filter((item) => item !== email)
+        : [...prev, email],
+    );
+  };
+
+  const handleAddMailRecipient = async () => {
+    if (!newMailRecipient.trim()) {
+      setMailErrorMessage("이메일 주소를 입력해 주세요.");
+      return;
+    }
+
+    setIsAddingMailRecipient(true);
+    setMailErrorMessage(null);
+    setMailSuccessMessage(null);
+
+    try {
+      const response = await fetch("/api/scrap-emails", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: newMailRecipient.trim() }),
+      });
+
+      const result = (await response.json()) as {
+        message?: string;
+        recipient?: MailRecipient;
+      };
+
+      if (!response.ok || !result.recipient) {
+        throw new Error(result.message || "이메일 주소를 추가하지 못했습니다.");
+      }
+
+      await mutateRecipients();
+      setSelectedMailRecipients((prev) =>
+        prev.includes(result.recipient!.email)
+          ? prev
+          : [...prev, result.recipient!.email],
+      );
+      setNewMailRecipient("");
+      setMailSuccessMessage("이메일 주소가 추가되었습니다.");
+    } catch (error) {
+      setMailErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "이메일 주소를 추가하지 못했습니다.",
+      );
+    } finally {
+      setIsAddingMailRecipient(false);
+    }
+  };
+
+  const handleSendScrapMail = async () => {
+    if (selectedMailRecipients.length === 0) {
+      setMailErrorMessage("전송할 이메일 주소를 하나 이상 선택해 주세요.");
+      return;
+    }
+
+    setIsSendingMail(true);
+    setMailErrorMessage(null);
+    setMailSuccessMessage(null);
+
+    try {
+      const response = await fetch("/api/scraps/send-mail", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ emails: selectedMailRecipients }),
+      });
+
+      const result = (await response.json()) as { message?: string };
+      if (!response.ok) {
+        throw new Error(result.message || "메일을 전송하지 못했습니다.");
+      }
+
+      setMailSuccessMessage(result.message || "메일을 전송했습니다.");
+    } catch (error) {
+      setMailErrorMessage(
+        error instanceof Error ? error.message : "메일을 전송하지 못했습니다.",
+      );
+    } finally {
+      setIsSendingMail(false);
+    }
+  };
+
   return (
     <Container maxW="8xl" className="pb-16 pt-10">
       <Stack spacing={4}>
@@ -358,7 +510,7 @@ export default function HomeClient() {
             </div>
           </div>
         </Stack>
-        <Box className="rounded-[28px] border border-slate-200 bg-white px-6 py-5 shadow-sm">
+        <Box className="rounded-xl border border-slate-200 bg-white px-4 py-2 shadow-sm">
           <Stack
             direction={{ base: "column", "1xl": "row" }}
             spacing={8}
@@ -496,7 +648,7 @@ export default function HomeClient() {
                             <AccordionIcon />
                           </AccordionButton>
                           <AccordionPanel pt={1} pb={3}>
-                            <Stack spacing={2} maxH="160px" overflowY="auto">
+                            <Stack spacing={2} maxH="192px" overflowY="auto">
                               {group.keywords.map(({ value }) => (
                                 <Button
                                   key={value}
@@ -597,7 +749,7 @@ export default function HomeClient() {
                                   </Text>
                                 </HStack>
                               ) : null}
-                              <Button
+                              <IconButton
                                 ml="auto"
                                 size="sm"
                                 variant={
@@ -606,15 +758,29 @@ export default function HomeClient() {
                                     : "outline"
                                 }
                                 colorScheme="purple"
+                                aria-label={
+                                  scrappedArticleKeys.has(getScrapKey(article))
+                                    ? "스크랩 해제"
+                                    : "스크랩"
+                                }
+                                icon={
+                                  <Bookmark
+                                    size={16}
+                                    aria-hidden="true"
+                                    fill={
+                                      scrappedArticleKeys.has(
+                                        getScrapKey(article),
+                                      )
+                                        ? "currentColor"
+                                        : "none"
+                                    }
+                                  />
+                                }
                                 isLoading={
                                   pendingScrapKey === getScrapKey(article)
                                 }
                                 onClick={() => handleToggleScrap(article)}
-                              >
-                                {scrappedArticleKeys.has(getScrapKey(article))
-                                  ? "스크랩 해제"
-                                  : "스크랩"}
-                              </Button>
+                              />
                             </HStack>
                             <Text
                               as="a"
@@ -664,6 +830,15 @@ export default function HomeClient() {
               <Stack spacing={4}>
                 <HStack justify="space-between">
                   <Heading size="sm">스크랩 기사</Heading>
+                  <Button
+                    size="sm"
+                    colorScheme="purple"
+                    leftIcon={<Mail size={14} aria-hidden="true" />}
+                    onClick={openMailModal}
+                    isDisabled={scrappedArticles.length === 0}
+                  >
+                    mail 전송
+                  </Button>
                 </HStack>
                 {isScrapLoading ? (
                   <Stack spacing={3}>
@@ -728,10 +903,16 @@ export default function HomeClient() {
                                     </Text>
                                     <IconButton
                                       aria-label="스크랩 해제"
-                                      icon={<Text fontSize="sm">x</Text>}
+                                      icon={
+                                        <Bookmark
+                                          size={14}
+                                          aria-hidden="true"
+                                          fill="currentColor"
+                                        />
+                                      }
                                       size="xs"
                                       variant="ghost"
-                                      colorScheme="gray"
+                                      colorScheme="purple"
                                       isLoading={
                                         pendingScrapKey === getScrapKey(article)
                                       }
@@ -759,6 +940,86 @@ export default function HomeClient() {
           </Stack>
         </MotionCard>
       </Stack>
+      <Modal isOpen={isMailModalOpen} onClose={closeMailModal} size="lg">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>스크랩 기사 메일 전송</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <Stack spacing={4}>
+              <HStack align="flex-start">
+                <Input
+                  value={newMailRecipient}
+                  onChange={(event) => setNewMailRecipient(event.target.value)}
+                  placeholder="이메일 주소를 입력하세요"
+                />
+                <Button
+                  onClick={handleAddMailRecipient}
+                  isLoading={isAddingMailRecipient}
+                >
+                  추가
+                </Button>
+              </HStack>
+              {mailErrorMessage ? (
+                <Text color="red.500" fontSize="sm">
+                  {mailErrorMessage}
+                </Text>
+              ) : null}
+              {mailSuccessMessage ? (
+                <Text color="green.600" fontSize="sm">
+                  {mailSuccessMessage}
+                </Text>
+              ) : null}
+              <Stack
+                spacing={3}
+                maxH="280px"
+                overflowY="auto"
+                className="rounded-xl border border-slate-200 bg-slate-50 p-3"
+              >
+                {isRecipientLoading ? (
+                  <Text color="gray.500" fontSize="sm">
+                    이메일 주소를 불러오는 중입니다.
+                  </Text>
+                ) : mailRecipients.length === 0 ? (
+                  <Text color="gray.500" fontSize="sm">
+                    등록된 이메일 주소가 없습니다.
+                  </Text>
+                ) : (
+                  mailRecipients.map((recipient) => (
+                    <Checkbox
+                      key={recipient.id}
+                      isChecked={selectedMailRecipients.includes(
+                        recipient.email,
+                      )}
+                      onChange={() =>
+                        handleToggleMailRecipient(recipient.email)
+                      }
+                      colorScheme="purple"
+                    >
+                      {recipient.email}
+                    </Checkbox>
+                  ))
+                )}
+              </Stack>
+            </Stack>
+          </ModalBody>
+          <ModalFooter>
+            <HStack>
+              <Button variant="ghost" onClick={closeMailModal}>
+                취소
+              </Button>
+              <Button
+                colorScheme="purple"
+                onClick={handleSendScrapMail}
+                isLoading={isSendingMail}
+                isDisabled={mailRecipients.length === 0}
+              >
+                확인
+              </Button>
+            </HStack>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Container>
   );
 }
