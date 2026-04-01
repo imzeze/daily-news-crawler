@@ -1,17 +1,13 @@
+import { listScraps } from "@/lib/scraps/store";
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import SMTPTransport from "nodemailer/lib/smtp-transport";
-import { listScraps } from "@/lib/scraps/store";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-}
-
-function buildHtml() {
-  return "";
 }
 
 export async function POST(request: Request) {
@@ -29,7 +25,6 @@ export async function POST(request: Request) {
 
   const host = process.env.MAIL_HOST;
   const port = Number(process.env.MAIL_PORT || 587);
-  const secure = process.env.MAIL_SECURE === "true";
   const user = process.env.MAIL_USER;
   const pass = process.env.MAIL_PASS;
   const from = process.env.MAIL_FROM || user;
@@ -49,13 +44,16 @@ export async function POST(request: Request) {
     );
   }
 
-  const grouped = articles.reduce<Record<string, typeof articles>>((acc, article) => {
-    if (!acc[article.keyword]) {
-      acc[article.keyword] = [];
-    }
-    acc[article.keyword].push(article);
-    return acc;
-  }, {});
+  const grouped = articles.reduce<Record<string, typeof articles>>(
+    (acc, article) => {
+      if (!acc[article.keyword]) {
+        acc[article.keyword] = [];
+      }
+      acc[article.keyword].push(article);
+      return acc;
+    },
+    {},
+  );
 
   const html = `
     <div style="font-family:Arial,sans-serif;max-width:720px;margin:0 auto;color:#0f172a;">
@@ -97,10 +95,10 @@ export async function POST(request: Request) {
     </div>
   `;
 
-  const transportOptions: SMTPTransport.Options = {
+  const transportOptions: SMTPTransport.Options & { family: 4 } = {
     host,
     port,
-    secure,
+    family: 4,
     auth: {
       user,
       pass,
@@ -109,16 +107,20 @@ export async function POST(request: Request) {
 
   const transporter = nodemailer.createTransport(transportOptions);
 
-  await transporter.sendMail({
-    from,
-    to: emails.join(", "),
-    subject: `[스크랩 기사] ${new Date().toLocaleDateString("ko-KR")} (${articles.length}건)`,
-    html,
-  });
+  try {
+    await transporter.sendMail({
+      from,
+      to: emails.join(", "),
+      subject: `[스크랩 기사] ${new Date().toLocaleDateString("ko-KR")} (${articles.length}건)`,
+      html,
+    });
 
-  return NextResponse.json({
-    message: `${emails.length}개의 이메일 주소로 스크랩 기사를 전송했습니다.`,
-    sentTo: emails,
-    articleCount: articles.length,
-  });
+    return NextResponse.json({
+      message: `${emails.length}개의 이메일 주소로 스크랩 기사를 전송했습니다.`,
+      sentTo: emails,
+      articleCount: articles.length,
+    });
+  } catch (error) {
+    console.error("이메일 전송 실패:", error);
+  }
 }

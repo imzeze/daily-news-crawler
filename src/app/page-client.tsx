@@ -677,7 +677,7 @@ export default function HomeClient() {
               </Stack>
             </Box>
 
-            <Stack spacing={4} flex="1">
+            <Stack spacing={4} flex="1" width="100%">
               {scrapErrorMessage ? (
                 <Text color="red.500">{scrapErrorMessage}</Text>
               ) : null}
@@ -837,7 +837,7 @@ export default function HomeClient() {
                     onClick={openMailModal}
                     isDisabled={scrappedArticles.length === 0}
                   >
-                    mail 전송
+                    mail
                   </Button>
                 </HStack>
                 {isScrapLoading ? (
