@@ -43,8 +43,10 @@ import {
   Bookmark,
   ChevronRight,
   Mail,
+  MessageSquareShare,
   Minus,
   Settings2,
+  Users,
   TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
@@ -114,6 +116,11 @@ const fetcher = async (url: string) => {
 
 const getScrapKey = (article: { keyword: string; url: string }) =>
   `${article.keyword}::${article.url}`;
+const LARK_GROUP_JOIN_URL =
+  "https://applink.larksuite.com/client/chat/chatter/add_by_link?link_token=e42p24d2-d0c8-4fd5-aab2-fac646q0bavf";
+const LARK_GROUP_JOIN_QR_URL = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(
+  LARK_GROUP_JOIN_URL,
+)}`;
 
 const SENTIMENT_META = {
   positive: {
@@ -155,6 +162,7 @@ export default function HomeClient() {
     null,
   );
   const [isMailModalOpen, setIsMailModalOpen] = useState(false);
+  const [isLarkJoinModalOpen, setIsLarkJoinModalOpen] = useState(false);
   const [selectedMailRecipients, setSelectedMailRecipients] = useState<
     string[]
   >([]);
@@ -165,6 +173,11 @@ export default function HomeClient() {
   );
   const [isAddingMailRecipient, setIsAddingMailRecipient] = useState(false);
   const [isSendingMail, setIsSendingMail] = useState(false);
+  const [isSendingLark, setIsSendingLark] = useState(false);
+  const [larkErrorMessage, setLarkErrorMessage] = useState<string | null>(null);
+  const [larkSuccessMessage, setLarkSuccessMessage] = useState<string | null>(
+    null,
+  );
   const isDesktop = useBreakpointValue({ base: false, lg: true });
   const { data: keywordData } = useSWR<KeywordResponse>(
     "/api/keywords",
@@ -377,6 +390,14 @@ export default function HomeClient() {
     setNewMailRecipient("");
   };
 
+  const openLarkJoinModal = () => {
+    setIsLarkJoinModalOpen(true);
+  };
+
+  const closeLarkJoinModal = () => {
+    setIsLarkJoinModalOpen(false);
+  };
+
   const handleToggleMailRecipient = (email: string) => {
     setSelectedMailRecipients((prev) =>
       prev.includes(email)
@@ -466,6 +487,35 @@ export default function HomeClient() {
     }
   };
 
+  const handleSendScrapLark = async () => {
+    setIsSendingLark(true);
+    setLarkErrorMessage(null);
+    setLarkSuccessMessage(null);
+
+    try {
+      const response = await fetch("/api/scraps/send-lark", {
+        method: "POST",
+      });
+
+      const result = (await response.json()) as { message?: string };
+      if (!response.ok) {
+        throw new Error(result.message || "Lark 메시지를 전송하지 못했습니다.");
+      }
+
+      setLarkSuccessMessage(
+        result.message || "Lark 메시지를 전송했습니다.",
+      );
+    } catch (error) {
+      setLarkErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Lark 메시지를 전송하지 못했습니다.",
+      );
+    } finally {
+      setIsSendingLark(false);
+    }
+  };
+
   return (
     <Container maxW="8xl" className="pb-16 pt-10">
       <Stack spacing={4}>
@@ -504,6 +554,12 @@ export default function HomeClient() {
                     icon={<ChevronRight size={16} aria-hidden="true" />}
                   >
                     기사 분석 키워드 관리
+                  </MenuItem>
+                  <MenuItem
+                    icon={<Users size={16} aria-hidden="true" />}
+                    onClick={openLarkJoinModal}
+                  >
+                    라크 그룹 참여하기
                   </MenuItem>
                 </MenuList>
               </Menu>
@@ -830,6 +886,8 @@ export default function HomeClient() {
               <Stack spacing={4}>
                 <HStack justify="space-between">
                   <Heading size="sm">스크랩 기사</Heading>
+                </HStack>
+                <HStack spacing={2} flexWrap="wrap">
                   <Button
                     size="sm"
                     colorScheme="purple"
@@ -839,7 +897,30 @@ export default function HomeClient() {
                   >
                     mail
                   </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    colorScheme="purple"
+                    leftIcon={
+                      <MessageSquareShare size={14} aria-hidden="true" />
+                    }
+                    onClick={handleSendScrapLark}
+                    isLoading={isSendingLark}
+                    isDisabled={scrappedArticles.length === 0}
+                  >
+                    lark
+                  </Button>
                 </HStack>
+                {larkErrorMessage ? (
+                  <Text color="red.500" fontSize="sm">
+                    {larkErrorMessage}
+                  </Text>
+                ) : null}
+                {larkSuccessMessage ? (
+                  <Text color="green.600" fontSize="sm">
+                    {larkSuccessMessage}
+                  </Text>
+                ) : null}
                 {isScrapLoading ? (
                   <Stack spacing={3}>
                     {Array.from({ length: 4 }).map((_, idx) => (
@@ -1015,6 +1096,51 @@ export default function HomeClient() {
                 isDisabled={mailRecipients.length === 0}
               >
                 확인
+              </Button>
+            </HStack>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+      <Modal
+        isOpen={isLarkJoinModalOpen}
+        onClose={closeLarkJoinModal}
+        size="md"
+      >
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>라크 그룹 참여하기</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <Stack spacing={4} align="center">
+              <Box
+                className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"
+              >
+                <img
+                  src={LARK_GROUP_JOIN_QR_URL}
+                  alt="라크 그룹 참여 QR 코드"
+                  width={320}
+                  height={320}
+                />
+              </Box>
+              <Text color="gray.600" fontSize="sm" textAlign="center">
+                QR 코드를 스캔하거나 아래 버튼으로 그룹 참여 링크를 열 수
+                있습니다.
+              </Text>
+            </Stack>
+          </ModalBody>
+          <ModalFooter>
+            <HStack>
+              <Button variant="ghost" onClick={closeLarkJoinModal}>
+                닫기
+              </Button>
+              <Button
+                as="a"
+                href={LARK_GROUP_JOIN_URL}
+                target="_blank"
+                rel="noreferrer"
+                colorScheme="purple"
+              >
+                링크 열기
               </Button>
             </HStack>
           </ModalFooter>

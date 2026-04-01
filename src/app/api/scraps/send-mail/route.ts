@@ -122,5 +122,9 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("이메일 전송 실패:", error);
+    return NextResponse.json(
+      { message: "이메일 전송 중 오류가 발생했습니다." },
+      { status: 500 },
+    );
   }
 }
