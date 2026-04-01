@@ -1,0 +1,44 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Keyword {
+  id        String   @id
+  value     String   @unique
+  category  String
+  enabled   Boolean  @default(true)
+  createdAt DateTime
+  updatedAt DateTime
+}
+
+model Scrap {
+  id          String   @id @default(cuid())
+  title       String
+  url         String
+  publishedAt DateTime
+  keyword     String
+  createdAt   DateTime @default(now())
+
+  @@unique([keyword, url])
+}
+
+model MailRecipient {
+  id        String   @id
+  email     String   @unique
+  createdAt DateTime
+}
+
+model SentimentKeyword {
+  id        String   @id
+  value     String
+  type      String
+  createdAt DateTime
+  updatedAt DateTime
+
+  @@unique([type, value])
+}
