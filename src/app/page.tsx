@@ -1,4 +1,4 @@
-import HomeClient from "./page-client";
+import HomeClient from "@/components/home";
 
 export const dynamic = "force-static";
 
