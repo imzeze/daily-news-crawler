@@ -1,5 +1,4 @@
 import { listKeywords } from "@/lib/keywords/store";
-import type { Article } from "./types";
 import { classifyArticle } from "./classify";
 import {
   isPublishedAtWithinRange,
@@ -7,6 +6,7 @@ import {
 } from "./date-range";
 import { fetchFromGoogle, fetchFromNaver } from "./providers";
 import { getSentimentKeywordMap } from "./sentiment-keywords";
+import type { Article } from "./types";
 
 export type CollectResult = {
   articles: Article[];
@@ -55,11 +55,14 @@ export async function collectDailyNews(
   const results = await Promise.all(tasks);
   const rawArticles = results
     .flatMap((result) => result.articles)
-    .filter((article) => isPublishedAtWithinRange(article.publishedAt, options));
+    .filter((article) =>
+      isPublishedAtWithinRange(article.publishedAt, options),
+    );
   const sentimentKeywordMap = await getSentimentKeywordMap();
   const articles = await mapWithConcurrency(rawArticles, 4, (article) =>
     classifyArticle(article, sentimentKeywordMap),
   );
+
   return {
     articles: articles.sort((a, b) =>
       a.publishedAt && b.publishedAt

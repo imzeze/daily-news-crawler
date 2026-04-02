@@ -8,9 +8,9 @@ import {
   Stack,
   Text,
 } from "@chakra-ui/react";
-import { formatInTimeZone } from "date-fns-tz";
 import { AlertTriangle, Bookmark, Minus, TrendingUp } from "lucide-react";
 
+import { formatInTimeZone } from "date-fns-tz";
 import { getScrapKey, type NewsArticle } from "./types";
 
 const SENTIMENT_META = {
@@ -57,7 +57,9 @@ export function NewsArticleList({
 }: NewsArticleListProps) {
   return (
     <Stack spacing={4} flex="1" width="100%">
-      {scrapErrorMessage ? <Text color="red.500">{scrapErrorMessage}</Text> : null}
+      {scrapErrorMessage ? (
+        <Text color="red.500">{scrapErrorMessage}</Text>
+      ) : null}
       {isLoading ? (
         <Stack
           spacing={0}
@@ -89,7 +91,8 @@ export function NewsArticleList({
           className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
         >
           {filteredArticles.map((article, idx) => {
-            const sentimentMeta = SENTIMENT_META[article.sentiment ?? "neutral"];
+            const sentimentMeta =
+              SENTIMENT_META[article.sentiment ?? "neutral"];
             const SentimentIcon = sentimentMeta.icon;
 
             return (
@@ -160,7 +163,7 @@ export function NewsArticleList({
                     {formatInTimeZone(
                       new Date(article.publishedAt),
                       "Asia/Seoul",
-                      "yyyy-MM-dd HH:mm",
+                      "yyyy-MM-dd",
                     )}
                   </Text>
                   {article.sentimentReason &&

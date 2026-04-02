@@ -100,12 +100,40 @@ export default function HomeClient() {
   );
   const { data, error, isLoading } = useSWR<NewsResponse>(
     useMemo(() => {
-      const activeKeyword =
-        selectedKeyword || keywordData?.keywords?.[0]?.value;
-      if (!activeKeyword) return null;
+      const sortedKeywordValues = [...(keywordData?.keywords ?? [])].sort(
+        (a, b) => {
+          if (a.category !== b.category) {
+            return a.category.localeCompare(b.category, "ko");
+          }
+
+          return a.value.localeCompare(b.value, "ko");
+        },
+      );
+      const groupedKeywordValues = Object.values(
+        sortedKeywordValues.reduce<Record<string, GroupedKeywords>>(
+          (acc, keyword) => {
+            const group = acc[keyword.category];
+
+            if (group) {
+              group.keywords.push(keyword);
+            } else {
+              acc[keyword.category] = {
+                category: keyword.category,
+                keywords: [keyword],
+              };
+            }
+
+            return acc;
+          },
+          {},
+        ),
+      );
+      const currentKeyword =
+        selectedKeyword || groupedKeywordValues[0]?.keywords[0]?.value;
+      if (!currentKeyword) return null;
 
       const params = new URLSearchParams({
-        keyword: activeKeyword,
+        keyword: currentKeyword,
         startDate: formatDateParam(startDate),
         endDate: formatDateParam(endDate),
       });
@@ -155,7 +183,8 @@ export default function HomeClient() {
       return acc;
     }, {}),
   );
-  const activeKeyword = selectedKeyword || sortedKeywords[0]?.value || "";
+  const defaultKeyword = groupedKeywords[0]?.keywords[0]?.value || "";
+  const activeKeyword = selectedKeyword || defaultKeyword;
   const articles = data?.articles ?? [];
   const scrappedArticles = scrapData?.articles ?? [];
   const mailRecipients = recipientData?.recipients ?? [];
@@ -274,9 +303,9 @@ export default function HomeClient() {
   }, [endDate, startDate]);
 
   useEffect(() => {
-    if (sortedKeywords.length === 0) return;
-    setSelectedKeyword((prev) => (prev ? prev : sortedKeywords[0].value));
-  }, [sortedKeywords]);
+    if (!defaultKeyword) return;
+    setSelectedKeyword((prev) => (prev ? prev : defaultKeyword));
+  }, [defaultKeyword]);
 
   useEffect(() => {
     if (!isMailModalOpen) return;

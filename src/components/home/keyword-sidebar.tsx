@@ -77,7 +77,7 @@ export function KeywordSidebar({
           >
             <Accordion
               allowMultiple
-              defaultIndex={groupedKeywords.map((_, index) => index)}
+              index={groupedKeywords.map((_, index) => index)}
             >
               {groupedKeywords.map((group) => (
                 <AccordionItem key={group.category} mb={2}>

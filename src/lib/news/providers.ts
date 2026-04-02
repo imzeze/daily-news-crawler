@@ -1,13 +1,12 @@
 import { load } from "cheerio";
-import { isValid, parse } from "date-fns";
+import { isValid, parse, subDays, subHours, subWeeks } from "date-fns";
 import { chromium } from "playwright";
-import type { Article } from "./types";
-import { subDays, subHours, subWeeks } from "date-fns";
 import {
   getNextDateParam,
   resolveNewsDateRange,
   type NewsDateRangeOptions,
 } from "./date-range";
+import type { Article } from "./types";
 
 export type NewsProvider = "naver" | "google";
 
@@ -237,10 +236,7 @@ const fetchNaverMoreArticles = async (
     "nqx_theme",
     '{"theme":{"main":{"name":"shopping","source":"TOS"}}}',
   );
-  url.searchParams.append(
-    "nso",
-    searchParams.nso,
-  );
+  url.searchParams.append("nso", searchParams.nso);
   url.searchParams.append("nx_and_query", "");
   url.searchParams.append("nx_search_hlquery", "");
   url.searchParams.append("nx_search_query", "");

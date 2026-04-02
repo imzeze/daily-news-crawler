@@ -16,9 +16,10 @@ import {
   Text,
   VStack,
 } from "@chakra-ui/react";
-import { formatInTimeZone } from "date-fns-tz";
 import { Bookmark, Mail, MessageSquareShare } from "lucide-react";
 
+import { format } from "date-fns";
+import { ko } from "date-fns/locale";
 import { getScrapKey, type ScrapArticle } from "./types";
 
 type ScrapSidebarProps = {
@@ -167,11 +168,9 @@ export function ScrapSidebar({
                           />
                         </HStack>
                         <Text mt={1} color="gray.500" fontSize="xs">
-                          {formatInTimeZone(
-                            new Date(article.publishedAt),
-                            "Asia/Seoul",
-                            "yyyy-MM-dd HH:mm",
-                          )}
+                          {format(new Date(article.publishedAt), "yyyy-MM-dd", {
+                            locale: ko,
+                          })}
                         </Text>
                       </Box>
                     ))}
