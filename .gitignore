@@ -2,4 +2,6 @@ node_modules
 .next
 .codex
 .vercel
-.env*.local
+.env.production
+.env.development
+.env
