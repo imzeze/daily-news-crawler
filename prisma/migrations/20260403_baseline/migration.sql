@@ -45,3 +45,5 @@ CREATE UNIQUE INDEX "MailRecipient_email_key" ON "MailRecipient"("email");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "SentimentKeyword_type_value_key" ON "SentimentKeyword"("type", "value");
+
+x
