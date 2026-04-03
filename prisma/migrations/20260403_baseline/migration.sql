@@ -4,8 +4,8 @@ CREATE TABLE "Keyword" (
     "value" TEXT NOT NULL,
     "category" TEXT NOT NULL,
     "enabled" BOOLEAN NOT NULL DEFAULT true,
-    "createdAt" DATETIME NOT NULL,
-    "updatedAt" DATETIME NOT NULL
+    "createdAt" TIMESTAMP(3) NOT NULL,
+    "updatedAt" TIMESTAMP(3) NOT NULL
 );
 
 -- CreateTable
@@ -13,16 +13,16 @@ CREATE TABLE "Scrap" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "title" TEXT NOT NULL,
     "url" TEXT NOT NULL,
-    "publishedAt" DATETIME NOT NULL,
+    "publishedAt" TIMESTAMP(3) NOT NULL,
     "keyword" TEXT NOT NULL,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- CreateTable
 CREATE TABLE "MailRecipient" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "email" TEXT NOT NULL,
-    "createdAt" DATETIME NOT NULL
+    "createdAt" TIMESTAMP(3) NOT NULL
 );
 
 -- CreateTable
@@ -30,8 +30,8 @@ CREATE TABLE "SentimentKeyword" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "value" TEXT NOT NULL,
     "type" TEXT NOT NULL,
-    "createdAt" DATETIME NOT NULL,
-    "updatedAt" DATETIME NOT NULL
+    "createdAt" TIMESTAMP(3) NOT NULL,
+    "updatedAt" TIMESTAMP(3) NOT NULL
 );
 
 -- CreateIndex
@@ -45,5 +45,3 @@ CREATE UNIQUE INDEX "MailRecipient_email_key" ON "MailRecipient"("email");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "SentimentKeyword_type_value_key" ON "SentimentKeyword"("type", "value");
-
-x
