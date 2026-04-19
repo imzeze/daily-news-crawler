@@ -16,11 +16,105 @@ import {
   Text,
   VStack,
 } from "@chakra-ui/react";
-import { Bookmark, Mail, MessageSquareShare } from "lucide-react";
-
+import {
+  closestCenter,
+  DndContext,
+  DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
+import { Bookmark, GripVertical, Mail, MessageSquareShare } from "lucide-react";
+
 import { getScrapKey, type ScrapArticle } from "./types";
+
+type SortableArticleItemProps = {
+  article: ScrapArticle;
+  pendingScrapKey: string | null;
+  onToggleScrap: (article: ScrapArticle) => void;
+};
+
+function SortableArticleItem({
+  article,
+  pendingScrapKey,
+  onToggleScrap,
+}: SortableArticleItemProps) {
+  const scrapKey = getScrapKey(article);
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: scrapKey });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <Box
+      ref={setNodeRef}
+      style={style}
+      key={scrapKey}
+      className="rounded-xl border border-slate-200 bg-white px-3 py-3"
+    >
+      <HStack align="flex-start" spacing={2}>
+        <Box
+          {...attributes}
+          {...listeners}
+          cursor="grab"
+          color="gray.400"
+          mt="2px"
+          flexShrink={0}
+          _active={{ cursor: "grabbing" }}
+        >
+          <GripVertical size={14} aria-hidden="true" />
+        </Box>
+        <Text
+          as="a"
+          href={article.url}
+          target="_blank"
+          rel="noreferrer"
+          fontSize="sm"
+          fontWeight="medium"
+          color="gray.900"
+          className="line-clamp-2 flex-1 hover:text-blue-600 hover:underline"
+        >
+          {article.title}
+        </Text>
+        <IconButton
+          aria-label="스크랩 해제"
+          icon={
+            <Bookmark size={14} aria-hidden="true" fill="currentColor" />
+          }
+          size="xs"
+          variant="ghost"
+          colorScheme="purple"
+          isLoading={pendingScrapKey === scrapKey}
+          onClick={() => onToggleScrap(article)}
+        />
+      </HStack>
+      <Text mt={1} color="gray.500" fontSize="xs" pl="22px">
+        {format(new Date(article.publishedAt), "yyyy-MM-dd", { locale: ko })}
+      </Text>
+    </Box>
+  );
+}
 
 type ScrapSidebarProps = {
   groupedScrappedArticles: [string, ScrapArticle[]][];
@@ -33,6 +127,7 @@ type ScrapSidebarProps = {
   onOpenMailModal: () => void;
   onSendLark: () => void;
   onToggleScrap: (article: ScrapArticle) => void;
+  onReorderArticles: (keyword: string, reordered: ScrapArticle[]) => void;
 };
 
 export function ScrapSidebar({
@@ -46,7 +141,26 @@ export function ScrapSidebar({
   onOpenMailModal,
   onSendLark,
   onToggleScrap,
+  onReorderArticles,
 }: ScrapSidebarProps) {
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  const handleDragEnd = (keyword: string, articles: ScrapArticle[]) => (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = articles.findIndex((a) => getScrapKey(a) === active.id);
+    const newIndex = articles.findIndex((a) => getScrapKey(a) === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    onReorderArticles(keyword, arrayMove(articles, oldIndex, newIndex));
+  };
+
   return (
     <Box
       w={{ base: "full", xl: "360px" }}
@@ -126,55 +240,33 @@ export function ScrapSidebar({
                   <AccordionIcon />
                 </AccordionButton>
                 <AccordionPanel px={2} pt={3} pb={1}>
-                  <VStack
-                    spacing={3}
-                    align="stretch"
-                    borderLeft="2px solid"
-                    borderColor="purple.100"
-                    pl={4}
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd(keyword, keywordArticles)}
                   >
-                    {keywordArticles.map((article) => (
-                      <Box
-                        key={getScrapKey(article)}
-                        className="rounded-xl border border-slate-200 bg-white px-3 py-3"
+                    <SortableContext
+                      items={keywordArticles.map((a) => getScrapKey(a))}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <VStack
+                        spacing={3}
+                        align="stretch"
+                        borderLeft="2px solid"
+                        borderColor="purple.100"
+                        pl={4}
                       >
-                        <HStack align="flex-start" spacing={2}>
-                          <Text
-                            as="a"
-                            href={article.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            fontSize="sm"
-                            fontWeight="medium"
-                            color="gray.900"
-                            className="line-clamp-2 flex-1 hover:text-blue-600 hover:underline"
-                          >
-                            {article.title}
-                          </Text>
-                          <IconButton
-                            aria-label="스크랩 해제"
-                            icon={
-                              <Bookmark
-                                size={14}
-                                aria-hidden="true"
-                                fill="currentColor"
-                              />
-                            }
-                            size="xs"
-                            variant="ghost"
-                            colorScheme="purple"
-                            isLoading={pendingScrapKey === getScrapKey(article)}
-                            onClick={() => onToggleScrap(article)}
+                        {keywordArticles.map((article) => (
+                          <SortableArticleItem
+                            key={getScrapKey(article)}
+                            article={article}
+                            pendingScrapKey={pendingScrapKey}
+                            onToggleScrap={onToggleScrap}
                           />
-                        </HStack>
-                        <Text mt={1} color="gray.500" fontSize="xs">
-                          {format(new Date(article.publishedAt), "yyyy-MM-dd", {
-                            locale: ko,
-                          })}
-                        </Text>
-                      </Box>
-                    ))}
-                  </VStack>
+                        ))}
+                      </VStack>
+                    </SortableContext>
+                  </DndContext>
                 </AccordionPanel>
               </AccordionItem>
             ))}

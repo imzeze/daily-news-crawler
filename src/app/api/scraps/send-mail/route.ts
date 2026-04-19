@@ -11,7 +11,15 @@ function isValidEmail(value: string) {
 }
 
 export async function POST(request: Request) {
-  const payload = (await request.json()) as { emails?: string[] };
+  const payload = (await request.json()) as {
+    emails?: string[];
+    articles?: Array<{
+      title: string;
+      url: string;
+      keyword: string;
+      publishedAt: string;
+    }>;
+  };
   const emails = Array.isArray(payload.emails)
     ? payload.emails.map((email) => email.trim().toLowerCase()).filter(Boolean)
     : [];
@@ -36,7 +44,10 @@ export async function POST(request: Request) {
     );
   }
 
-  const { articles } = await listScraps();
+  const articles =
+    Array.isArray(payload.articles) && payload.articles.length > 0
+      ? payload.articles
+      : (await listScraps()).articles;
   if (articles.length === 0) {
     return NextResponse.json(
       { message: "전송할 스크랩 기사가 없습니다." },
@@ -78,7 +89,6 @@ export async function POST(request: Request) {
                             <div style="margin-top:4px;color:#64748b;font-size:12px;">
                               ${new Intl.DateTimeFormat("ko-KR", {
                                 dateStyle: "medium",
-                                timeStyle: "short",
                               }).format(new Date(article.publishedAt))}
                             </div>
                           </td>

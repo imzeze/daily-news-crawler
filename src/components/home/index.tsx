@@ -159,6 +159,31 @@ export default function HomeClient() {
     revalidateOnFocus: false,
   });
 
+  const [orderedScrappedArticles, setOrderedScrappedArticles] = useState<
+    ScrapArticle[]
+  >([]);
+
+  useEffect(() => {
+    const incoming = scrapData?.articles ?? [];
+    setOrderedScrappedArticles((prev) => {
+      const incomingKeySet = new Set(incoming.map((a) => getScrapKey(a)));
+      const kept = prev.filter((a) => incomingKeySet.has(getScrapKey(a)));
+      const prevKeySet = new Set(kept.map((a) => getScrapKey(a)));
+      const added = incoming.filter((a) => !prevKeySet.has(getScrapKey(a)));
+      return [...kept, ...added];
+    });
+  }, [scrapData]);
+
+  const handleReorderArticles = (
+    keyword: string,
+    reordered: ScrapArticle[],
+  ) => {
+    setOrderedScrappedArticles((prev) => {
+      const others = prev.filter((a) => a.keyword !== keyword);
+      return [...others, ...reordered];
+    });
+  };
+
   const keywords = keywordData?.keywords ?? [];
   const sortedKeywords = [...keywords].sort((a, b) => {
     if (a.category !== b.category) {
@@ -198,7 +223,7 @@ export default function HomeClient() {
   const groupedScrappedArticles = useMemo(
     () =>
       Object.entries(
-        scrappedArticles.reduce<Record<string, ScrapArticle[]>>(
+        orderedScrappedArticles.reduce<Record<string, ScrapArticle[]>>(
           (acc, article) => {
             if (!acc[article.keyword]) {
               acc[article.keyword] = [];
@@ -212,7 +237,7 @@ export default function HomeClient() {
       ).sort(([leftKeyword], [rightKeyword]) =>
         leftKeyword.localeCompare(rightKeyword, "ko"),
       ),
-    [scrappedArticles],
+    [orderedScrappedArticles],
   );
 
   const handleToggleScrap = async (article: ScrapArticle | NewsArticle) => {
@@ -401,7 +426,10 @@ export default function HomeClient() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ emails: selectedMailRecipients }),
+        body: JSON.stringify({
+          emails: selectedMailRecipients,
+          articles: orderedScrappedArticles,
+        }),
       });
 
       const result = (await response.json()) as { message?: string };
@@ -427,6 +455,10 @@ export default function HomeClient() {
     try {
       const response = await fetch("/api/scraps/send-lark", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ articles: orderedScrappedArticles }),
       });
 
       const result = (await response.json()) as { message?: string };
@@ -489,7 +521,7 @@ export default function HomeClient() {
                     icon={<Users size={16} aria-hidden="true" />}
                     onClick={() => setIsLarkJoinModalOpen(true)}
                   >
-                    라크 그룹 참여하기
+                    Lark 공지방 참여하기
                   </MenuItem>
                 </MenuList>
               </Menu>
@@ -548,6 +580,7 @@ export default function HomeClient() {
               onOpenMailModal={openMailModal}
               onSendLark={handleSendScrapLark}
               onToggleScrap={handleToggleScrap}
+              onReorderArticles={handleReorderArticles}
             />
           </Stack>
         </MotionCard>
@@ -641,7 +674,7 @@ export default function HomeClient() {
       >
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>라크 그룹 참여하기</ModalHeader>
+          <ModalHeader>Lark 공지방 참여하기</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             <Stack spacing={4} align="center">

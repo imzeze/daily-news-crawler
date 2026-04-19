@@ -32,7 +32,6 @@ function buildLarkReportText(
         ...items.map((article, index) => {
           const publishedAt = new Intl.DateTimeFormat("ko-KR", {
             dateStyle: "medium",
-            timeStyle: "short",
           }).format(new Date(article.publishedAt));
 
           return `${index + 1}. ${article.title}\n${publishedAt}\n${article.url}`;
@@ -42,8 +41,29 @@ function buildLarkReportText(
     .join("\n\n\n");
 }
 
-export async function POST() {
-  const { articles } = await listScraps();
+export async function POST(request: Request) {
+  let articles: Array<{
+    title: string;
+    url: string;
+    keyword: string;
+    publishedAt: string;
+  }>;
+
+  try {
+    const body = (await request.json()) as {
+      articles?: Array<{
+        title: string;
+        url: string;
+        keyword: string;
+        publishedAt: string;
+      }>;
+    };
+    articles = Array.isArray(body?.articles) && body.articles.length > 0
+      ? body.articles
+      : (await listScraps()).articles;
+  } catch {
+    articles = (await listScraps()).articles;
+  }
 
   if (articles.length === 0) {
     return NextResponse.json(
