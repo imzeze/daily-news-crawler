@@ -70,7 +70,6 @@ function SortableArticleItem({
     <Box
       ref={setNodeRef}
       style={style}
-      key={scrapKey}
       className="rounded-xl border border-slate-200 bg-white px-3 py-3"
     >
       <HStack align="flex-start" spacing={2}>
@@ -99,9 +98,7 @@ function SortableArticleItem({
         </Text>
         <IconButton
           aria-label="스크랩 해제"
-          icon={
-            <Bookmark size={14} aria-hidden="true" fill="currentColor" />
-          }
+          icon={<Bookmark size={14} aria-hidden="true" fill="currentColor" />}
           size="xs"
           variant="ghost"
           colorScheme="purple"
@@ -150,16 +147,18 @@ export function ScrapSidebar({
     }),
   );
 
-  const handleDragEnd = (keyword: string, articles: ScrapArticle[]) => (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
+  const handleDragEnd =
+    (keyword: string, articles: ScrapArticle[]) =>
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
 
-    const oldIndex = articles.findIndex((a) => getScrapKey(a) === active.id);
-    const newIndex = articles.findIndex((a) => getScrapKey(a) === over.id);
-    if (oldIndex === -1 || newIndex === -1) return;
+      const oldIndex = articles.findIndex((a) => getScrapKey(a) === active.id);
+      const newIndex = articles.findIndex((a) => getScrapKey(a) === over.id);
+      if (oldIndex === -1 || newIndex === -1) return;
 
-    onReorderArticles(keyword, arrayMove(articles, oldIndex, newIndex));
-  };
+      onReorderArticles(keyword, arrayMove(articles, oldIndex, newIndex));
+    };
 
   return (
     <Box

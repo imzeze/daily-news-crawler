@@ -2,15 +2,17 @@
 
 import {
   Box,
+  Collapse,
   HStack,
   IconButton,
   Skeleton,
   Stack,
   Text,
 } from "@chakra-ui/react";
-import { AlertTriangle, Bookmark, Minus, TrendingUp } from "lucide-react";
+import { AlertTriangle, Bookmark, Link2, Minus, TrendingUp } from "lucide-react";
 
 import { formatInTimeZone } from "date-fns-tz";
+import { useState } from "react";
 import { getScrapKey, type NewsArticle } from "./types";
 
 const SENTIMENT_META = {
@@ -34,6 +36,149 @@ const SENTIMENT_META = {
   },
 } as const;
 
+type ArticleCardProps = {
+  article: NewsArticle;
+  relatedArticles: NewsArticle[];
+  scrappedArticleKeys: Set<string>;
+  pendingScrapKey: string | null;
+  onToggleScrap: (article: NewsArticle) => void;
+};
+
+function ArticleCard({
+  article,
+  relatedArticles,
+  scrappedArticleKeys,
+  pendingScrapKey,
+  onToggleScrap,
+}: ArticleCardProps) {
+  const [relatedOpen, setRelatedOpen] = useState(false);
+  const sentimentMeta = SENTIMENT_META[article.sentiment ?? "neutral"];
+  const SentimentIcon = sentimentMeta.icon;
+  const scrapKey = getScrapKey(article);
+
+  return (
+    <Box
+      className="border-b border-slate-200 transition-colors last:border-b-0 hover:bg-slate-50"
+      px={5}
+      py={5}
+    >
+      <Stack
+        spacing={3}
+        className={`rounded-xl border p-4 ${sentimentMeta.accentClass}`}
+      >
+        <HStack spacing={2} align="center" flexWrap="wrap">
+          {article.sentiment ? (
+            <HStack
+              spacing={1}
+              className={`rounded-full px-2.5 py-1 ${sentimentMeta.pillClass}`}
+            >
+              <SentimentIcon size={12} aria-hidden="true" />
+              <Text as="span" fontSize="xs" fontWeight="bold">
+                {sentimentMeta.label}
+              </Text>
+            </HStack>
+          ) : null}
+          {relatedArticles.length > 0 && (
+            <HStack
+              as="button"
+              spacing={1}
+              onClick={() => setRelatedOpen((prev) => !prev)}
+              className="rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 hover:bg-violet-100"
+              cursor="pointer"
+            >
+              <Link2 size={11} aria-hidden="true" color="#7c3aed" />
+              <Text as="span" fontSize="xs" fontWeight="bold" color="violet.700">
+                관련 기사 {relatedArticles.length}건
+              </Text>
+            </HStack>
+          )}
+          <IconButton
+            ml="auto"
+            size="sm"
+            variant={scrappedArticleKeys.has(scrapKey) ? "solid" : "outline"}
+            colorScheme="purple"
+            aria-label={
+              scrappedArticleKeys.has(scrapKey) ? "스크랩 해제" : "스크랩"
+            }
+            icon={
+              <Bookmark
+                size={16}
+                aria-hidden="true"
+                fill={scrappedArticleKeys.has(scrapKey) ? "currentColor" : "none"}
+              />
+            }
+            isLoading={pendingScrapKey === scrapKey}
+            onClick={() => onToggleScrap(article)}
+          />
+        </HStack>
+        <Text
+          as="a"
+          href={article.url}
+          target="_blank"
+          rel="noreferrer"
+          fontWeight="semibold"
+          color="gray.900"
+          className="line-clamp-2 hover:text-blue-600 hover:underline"
+        >
+          {article.title}
+        </Text>
+        <Text color="gray.500" fontSize="sm">
+          {article.source} -{" "}
+          {formatInTimeZone(
+            new Date(article.publishedAt),
+            "Asia/Seoul",
+            "yyyy-MM-dd",
+          )}
+        </Text>
+        {article.sentimentReason &&
+        !article.sentimentReason.startsWith("본문 기준") ? (
+          <Text color="gray.700" fontSize="sm" fontWeight="medium">
+            {article.sentimentReason}
+          </Text>
+        ) : null}
+
+        {/* 관련 기사 펼치기 */}
+        <Collapse in={relatedOpen} animateOpacity>
+          <Stack
+            spacing={2}
+            pt={2}
+            borderTop="1px solid"
+            borderColor="violet.100"
+          >
+            {relatedArticles.map((related) => (
+              <Box
+                key={related.url}
+                className="rounded-lg border border-violet-100 bg-white px-3 py-2"
+              >
+                <Text
+                  as="a"
+                  href={related.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  fontSize="xs"
+                  fontWeight="medium"
+                  color="gray.800"
+                  className="line-clamp-2 hover:text-blue-600 hover:underline"
+                >
+                  {related.title}
+                </Text>
+                <Text mt={0.5} color="gray.400" fontSize="xs">
+                  {related.source} ·{" "}
+                  {formatInTimeZone(
+                    new Date(related.publishedAt),
+                    "Asia/Seoul",
+                    "yyyy-MM-dd",
+                  )}
+                </Text>
+              </Box>
+            ))}
+          </Stack>
+        </Collapse>
+      </Stack>
+    </Box>
+  );
+}
+
 type NewsArticleListProps = {
   filteredArticles: NewsArticle[];
   selectedKeyword: string;
@@ -42,6 +187,7 @@ type NewsArticleListProps = {
   scrapErrorMessage: string | null;
   scrappedArticleKeys: Set<string>;
   pendingScrapKey: string | null;
+  relatedMap: Record<string, NewsArticle[]>;
   onToggleScrap: (article: NewsArticle) => void;
 };
 
@@ -53,6 +199,7 @@ export function NewsArticleList({
   scrapErrorMessage,
   scrappedArticleKeys,
   pendingScrapKey,
+  relatedMap,
   onToggleScrap,
 }: NewsArticleListProps) {
   return (
@@ -90,92 +237,16 @@ export function NewsArticleList({
           spacing={0}
           className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
         >
-          {filteredArticles.map((article, idx) => {
-            const sentimentMeta =
-              SENTIMENT_META[article.sentiment ?? "neutral"];
-            const SentimentIcon = sentimentMeta.icon;
-
-            return (
-              <Box
-                key={`${article.publishedAt}_${idx}`}
-                className="border-b border-slate-200 transition-colors last:border-b-0 hover:bg-slate-50"
-                px={5}
-                py={5}
-              >
-                <Stack
-                  spacing={3}
-                  className={`rounded-xl border p-4 ${sentimentMeta.accentClass}`}
-                >
-                  <HStack spacing={2} align="center" flexWrap="wrap">
-                    {article.sentiment ? (
-                      <HStack
-                        spacing={1}
-                        className={`rounded-full px-2.5 py-1 ${sentimentMeta.pillClass}`}
-                      >
-                        <SentimentIcon size={12} aria-hidden="true" />
-                        <Text as="span" fontSize="xs" fontWeight="bold">
-                          {sentimentMeta.label}
-                        </Text>
-                      </HStack>
-                    ) : null}
-                    <IconButton
-                      ml="auto"
-                      size="sm"
-                      variant={
-                        scrappedArticleKeys.has(getScrapKey(article))
-                          ? "solid"
-                          : "outline"
-                      }
-                      colorScheme="purple"
-                      aria-label={
-                        scrappedArticleKeys.has(getScrapKey(article))
-                          ? "스크랩 해제"
-                          : "스크랩"
-                      }
-                      icon={
-                        <Bookmark
-                          size={16}
-                          aria-hidden="true"
-                          fill={
-                            scrappedArticleKeys.has(getScrapKey(article))
-                              ? "currentColor"
-                              : "none"
-                          }
-                        />
-                      }
-                      isLoading={pendingScrapKey === getScrapKey(article)}
-                      onClick={() => onToggleScrap(article)}
-                    />
-                  </HStack>
-                  <Text
-                    as="a"
-                    href={article.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    fontWeight="semibold"
-                    color="gray.900"
-                    className="line-clamp-2 hover:text-blue-600 hover:underline"
-                  >
-                    {article.title}
-                  </Text>
-                  <Text color="gray.500" fontSize="sm">
-                    {article.source} -{" "}
-                    {formatInTimeZone(
-                      new Date(article.publishedAt),
-                      "Asia/Seoul",
-                      "yyyy-MM-dd",
-                    )}
-                  </Text>
-                  {article.sentimentReason &&
-                  !article.sentimentReason.startsWith("본문 기준") ? (
-                    <Text color="gray.700" fontSize="sm" fontWeight="medium">
-                      {article.sentimentReason}
-                    </Text>
-                  ) : null}
-                </Stack>
-              </Box>
-            );
-          })}
+          {filteredArticles.map((article, idx) => (
+            <ArticleCard
+              key={`${article.publishedAt}_${idx}`}
+              article={article}
+              relatedArticles={relatedMap[article.url] ?? []}
+              scrappedArticleKeys={scrappedArticleKeys}
+              pendingScrapKey={pendingScrapKey}
+              onToggleScrap={onToggleScrap}
+            />
+          ))}
         </Stack>
       )}
     </Stack>

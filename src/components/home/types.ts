@@ -54,6 +54,28 @@ export type GroupedKeywords = {
   keywords: Keyword[];
 };
 
+export type IssueCluster = {
+  id: string;
+  title: string;
+  brief: string;
+  riskLevel: "low" | "medium" | "high";
+  articleCount: number;
+  sourceKeywordCount: number;
+  firstPublishedAt: string;
+  lastPublishedAt: string;
+  topKeywords: string[];
+  articles: Array<{
+    title: string;
+    url: string;
+    publishedAt: string;
+    keyword: string;
+  }>;
+};
+
+export type ClusterResponse = {
+  clusters: IssueCluster[];
+};
+
 export type DatePreset = "today" | "3days" | "1week" | null;
 
 export const getScrapKey = (article: { keyword: string; url: string }) =>

@@ -31,6 +31,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
 
+import { clusterArticles } from "@/lib/clustering";
 import { DateFilterSection } from "./date-filter-section";
 import { KeywordSidebar } from "./keyword-sidebar";
 import { NewsArticleList } from "./news-article-list";
@@ -216,6 +217,30 @@ export default function HomeClient() {
   const filteredArticles = selectedKeyword
     ? articles.filter((article) => article.keyword === selectedKeyword)
     : articles;
+
+  const relatedMap = useMemo(() => {
+    if (filteredArticles.length < 2) return {} as Record<string, NewsArticle[]>;
+    const clusters = clusterArticles(
+      filteredArticles.map((a) => ({
+        title: a.title,
+        url: a.url,
+        publishedAt: new Date(a.publishedAt),
+        keyword: a.keyword,
+      })),
+      filteredArticles.length,
+    );
+    const map: Record<string, NewsArticle[]> = {};
+    for (const cluster of clusters) {
+      if (cluster.articles.length < 2) continue;
+      const urlSet = new Set(cluster.articles.map((a) => a.url));
+      for (const ca of cluster.articles) {
+        map[ca.url] = filteredArticles.filter(
+          (a) => urlSet.has(a.url) && a.url !== ca.url,
+        );
+      }
+    }
+    return map;
+  }, [filteredArticles]);
   const scrappedArticleKeys = useMemo(
     () => new Set(scrappedArticles.map((article) => getScrapKey(article))),
     [scrappedArticles],
@@ -566,6 +591,7 @@ export default function HomeClient() {
               scrapErrorMessage={scrapErrorMessage}
               scrappedArticleKeys={scrappedArticleKeys}
               pendingScrapKey={pendingScrapKey}
+              relatedMap={relatedMap}
               onToggleScrap={handleToggleScrap}
             />
 
