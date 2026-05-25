@@ -22,6 +22,7 @@ model Scrap {
   url         String
   publishedAt DateTime
   keyword     String
+  source      String?
   createdAt   DateTime @default(now())
 
   @@unique([keyword, url])

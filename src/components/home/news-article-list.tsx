@@ -13,7 +13,7 @@ import { AlertTriangle, Bookmark, Link2, Minus, TrendingUp } from "lucide-react"
 
 import { formatInTimeZone } from "date-fns-tz";
 import { useState } from "react";
-import { getScrapKey, type NewsArticle } from "./types";
+import { type NewsArticle } from "./types";
 
 const SENTIMENT_META = {
   positive: {
@@ -39,7 +39,7 @@ const SENTIMENT_META = {
 type ArticleCardProps = {
   article: NewsArticle;
   relatedArticles: NewsArticle[];
-  scrappedArticleKeys: Set<string>;
+  scrappedUrls: Set<string>;
   pendingScrapKey: string | null;
   onToggleScrap: (article: NewsArticle) => void;
 };
@@ -47,14 +47,13 @@ type ArticleCardProps = {
 function ArticleCard({
   article,
   relatedArticles,
-  scrappedArticleKeys,
+  scrappedUrls,
   pendingScrapKey,
   onToggleScrap,
 }: ArticleCardProps) {
   const [relatedOpen, setRelatedOpen] = useState(false);
   const sentimentMeta = SENTIMENT_META[article.sentiment ?? "neutral"];
   const SentimentIcon = sentimentMeta.icon;
-  const scrapKey = getScrapKey(article);
 
   return (
     <Box
@@ -95,19 +94,19 @@ function ArticleCard({
           <IconButton
             ml="auto"
             size="sm"
-            variant={scrappedArticleKeys.has(scrapKey) ? "solid" : "outline"}
+            variant={scrappedUrls.has(article.url) ? "solid" : "outline"}
             colorScheme="purple"
             aria-label={
-              scrappedArticleKeys.has(scrapKey) ? "스크랩 해제" : "스크랩"
+              scrappedUrls.has(article.url) ? "스크랩 해제" : "스크랩"
             }
             icon={
               <Bookmark
                 size={16}
                 aria-hidden="true"
-                fill={scrappedArticleKeys.has(scrapKey) ? "currentColor" : "none"}
+                fill={scrappedUrls.has(article.url) ? "currentColor" : "none"}
               />
             }
-            isLoading={pendingScrapKey === scrapKey}
+            isLoading={pendingScrapKey === article.url}
             onClick={() => onToggleScrap(article)}
           />
         </HStack>
@@ -185,7 +184,7 @@ type NewsArticleListProps = {
   isLoading: boolean;
   hasError: boolean;
   scrapErrorMessage: string | null;
-  scrappedArticleKeys: Set<string>;
+  scrappedUrls: Set<string>;
   pendingScrapKey: string | null;
   relatedMap: Record<string, NewsArticle[]>;
   onToggleScrap: (article: NewsArticle) => void;
@@ -197,7 +196,7 @@ export function NewsArticleList({
   isLoading,
   hasError,
   scrapErrorMessage,
-  scrappedArticleKeys,
+  scrappedUrls,
   pendingScrapKey,
   relatedMap,
   onToggleScrap,
@@ -242,7 +241,7 @@ export function NewsArticleList({
               key={`${article.publishedAt}_${idx}`}
               article={article}
               relatedArticles={relatedMap[article.url] ?? []}
-              scrappedArticleKeys={scrappedArticleKeys}
+              scrappedUrls={scrappedUrls}
               pendingScrapKey={pendingScrapKey}
               onToggleScrap={onToggleScrap}
             />

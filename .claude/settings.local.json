@@ -3,7 +3,9 @@
     "allow": [
       "Bash(npm ls *)",
       "Bash(npx tsc *)",
-      "Bash(npx next *)"
+      "Bash(npx next *)",
+      "Bash(npx vercel *)",
+      "Bash(npx prisma *)"
     ]
   }
 }

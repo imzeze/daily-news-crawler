@@ -35,7 +35,13 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
-import { Bookmark, GripVertical, Mail, MessageSquareShare } from "lucide-react";
+import {
+  Bookmark,
+  GripVertical,
+  Mail,
+  MessageSquareShare,
+} from "lucide-react";
+import { useMemo } from "react";
 
 import { getScrapKey, type ScrapArticle } from "./types";
 
@@ -84,38 +90,41 @@ function SortableArticleItem({
         >
           <GripVertical size={14} aria-hidden="true" />
         </Box>
-        <Text
-          as="a"
-          href={article.url}
-          target="_blank"
-          rel="noreferrer"
-          fontSize="sm"
-          fontWeight="medium"
-          color="gray.900"
-          className="line-clamp-2 flex-1 hover:text-blue-600 hover:underline"
-        >
-          {article.title}
-        </Text>
+        <Stack spacing={1} flex={1} minW={0}>
+          <Text
+            as="a"
+            href={article.url}
+            target="_blank"
+            rel="noreferrer"
+            fontSize="sm"
+            fontWeight="medium"
+            color="gray.900"
+            className="line-clamp-2 hover:text-blue-600 hover:underline"
+          >
+            {article.title}
+          </Text>
+          <Text color="gray.400" fontSize="xs">
+            {format(new Date(article.publishedAt), "yyyy-MM-dd", {
+              locale: ko,
+            })}
+          </Text>
+        </Stack>
         <IconButton
           aria-label="스크랩 해제"
           icon={<Bookmark size={14} aria-hidden="true" fill="currentColor" />}
           size="xs"
           variant="ghost"
           colorScheme="purple"
-          isLoading={pendingScrapKey === scrapKey}
+          isLoading={pendingScrapKey === article.url}
           onClick={() => onToggleScrap(article)}
         />
       </HStack>
-      <Text mt={1} color="gray.500" fontSize="xs" pl="22px">
-        {format(new Date(article.publishedAt), "yyyy-MM-dd", { locale: ko })}
-      </Text>
     </Box>
   );
 }
 
 type ScrapSidebarProps = {
-  groupedScrappedArticles: [string, ScrapArticle[]][];
-  scrappedArticles: ScrapArticle[];
+  orderedScrappedArticles: ScrapArticle[];
   isScrapLoading: boolean;
   pendingScrapKey: string | null;
   larkErrorMessage: string | null;
@@ -124,12 +133,16 @@ type ScrapSidebarProps = {
   onOpenMailModal: () => void;
   onSendLark: () => void;
   onToggleScrap: (article: ScrapArticle) => void;
-  onReorderArticles: (keyword: string, reordered: ScrapArticle[]) => void;
+  onReorderAllArticles: (reordered: ScrapArticle[]) => void;
+  onMoveToGroup: (
+    originalArticle: ScrapArticle,
+    newKeyword: string,
+    newOrder: ScrapArticle[],
+  ) => void;
 };
 
 export function ScrapSidebar({
-  groupedScrappedArticles,
-  scrappedArticles,
+  orderedScrappedArticles,
   isScrapLoading,
   pendingScrapKey,
   larkErrorMessage,
@@ -138,7 +151,8 @@ export function ScrapSidebar({
   onOpenMailModal,
   onSendLark,
   onToggleScrap,
-  onReorderArticles,
+  onReorderAllArticles,
+  onMoveToGroup,
 }: ScrapSidebarProps) {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -147,18 +161,57 @@ export function ScrapSidebar({
     }),
   );
 
-  const handleDragEnd =
-    (keyword: string, articles: ScrapArticle[]) =>
-    (event: DragEndEvent) => {
-      const { active, over } = event;
-      if (!over || active.id === over.id) return;
+  // 플랫 배열에서 키워드별 그룹 도출 (첫 등장 순서 기준)
+  const groups = useMemo(() => {
+    const keywordFirstIndex: Record<string, number> = {};
+    orderedScrappedArticles.forEach((article, idx) => {
+      if (keywordFirstIndex[article.keyword] === undefined) {
+        keywordFirstIndex[article.keyword] = idx;
+      }
+    });
 
-      const oldIndex = articles.findIndex((a) => getScrapKey(a) === active.id);
-      const newIndex = articles.findIndex((a) => getScrapKey(a) === over.id);
-      if (oldIndex === -1 || newIndex === -1) return;
+    const sortedKeywords = Object.keys(keywordFirstIndex).sort(
+      (a, b) => keywordFirstIndex[a] - keywordFirstIndex[b],
+    );
 
-      onReorderArticles(keyword, arrayMove(articles, oldIndex, newIndex));
-    };
+    const grouped: Record<string, ScrapArticle[]> = {};
+    for (const article of orderedScrappedArticles) {
+      if (!grouped[article.keyword]) grouped[article.keyword] = [];
+      grouped[article.keyword].push(article);
+    }
+
+    return sortedKeywords.map((keyword) => ({
+      keyword,
+      articles: grouped[keyword],
+    }));
+  }, [orderedScrappedArticles]);
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = orderedScrappedArticles.findIndex(
+      (a) => getScrapKey(a) === active.id,
+    );
+    const newIndex = orderedScrappedArticles.findIndex(
+      (a) => getScrapKey(a) === over.id,
+    );
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const activeArticle = orderedScrappedArticles[oldIndex];
+    const targetKeyword = orderedScrappedArticles[newIndex].keyword;
+    const reordered = arrayMove(orderedScrappedArticles, oldIndex, newIndex);
+
+    if (activeArticle.keyword !== targetKeyword) {
+      // 다른 키워드 그룹으로 이동: 기사의 키워드를 대상 그룹으로 변경
+      const newOrder = reordered.map((a) =>
+        getScrapKey(a) === active.id ? { ...a, keyword: targetKeyword } : a,
+      );
+      onMoveToGroup(activeArticle, targetKeyword, newOrder);
+    } else {
+      onReorderAllArticles(reordered);
+    }
+  };
 
   return (
     <Box
@@ -178,7 +231,7 @@ export function ScrapSidebar({
             colorScheme="purple"
             leftIcon={<Mail size={14} aria-hidden="true" />}
             onClick={onOpenMailModal}
-            isDisabled={scrappedArticles.length === 0}
+            isDisabled={orderedScrappedArticles.length === 0}
           >
             mail
           </Button>
@@ -189,7 +242,7 @@ export function ScrapSidebar({
             leftIcon={<MessageSquareShare size={14} aria-hidden="true" />}
             onClick={onSendLark}
             isLoading={isSendingLark}
-            isDisabled={scrappedArticles.length === 0}
+            isDisabled={orderedScrappedArticles.length === 0}
           >
             lark
           </Button>
@@ -214,40 +267,48 @@ export function ScrapSidebar({
               />
             ))}
           </Stack>
-        ) : groupedScrappedArticles.length === 0 ? (
+        ) : groups.length === 0 ? (
           <Text color="gray.500" fontSize="sm">
             기사 카드의 스크랩 버튼으로 관심 기사를 저장할 수 있습니다.
           </Text>
         ) : (
-          <Accordion allowMultiple defaultIndex={[0]}>
-            {groupedScrappedArticles.map(([keyword, keywordArticles]) => (
-              <AccordionItem key={keyword} border="none" mb={2}>
-                <AccordionButton
-                  px={3}
-                  py={3}
-                  borderRadius="xl"
-                  className="bg-slate-50"
-                >
-                  <Box flex="1" textAlign="left">
-                    <Text fontWeight="semibold" color="gray.800">
-                      {keyword}
-                    </Text>
-                    <Text color="gray.500" fontSize="xs">
-                      {keywordArticles.length}건
-                    </Text>
-                  </Box>
-                  <AccordionIcon />
-                </AccordionButton>
-                <AccordionPanel px={2} pt={3} pb={1}>
-                  <DndContext
-                    sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={handleDragEnd(keyword, keywordArticles)}
-                  >
-                    <SortableContext
-                      items={keywordArticles.map((a) => getScrapKey(a))}
-                      strategy={verticalListSortingStrategy}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={orderedScrappedArticles.map((a) => getScrapKey(a))}
+              strategy={verticalListSortingStrategy}
+            >
+              <Box
+                maxH={{ base: "auto", lg: "calc(100vh - 180px)" }}
+                overflowY={{ base: "visible", lg: "auto" }}
+                pr={{ base: 0, lg: 2 }}
+              >
+              <Accordion
+                allowMultiple
+                defaultIndex={groups.map((_, i) => i)}
+              >
+                {groups.map(({ keyword, articles }) => (
+                  <AccordionItem key={keyword} border="none" mb={2}>
+                    <AccordionButton
+                      px={3}
+                      py={3}
+                      borderRadius="xl"
+                      className="bg-slate-50"
                     >
+                      <Box flex="1" textAlign="left">
+                        <Text fontWeight="semibold" color="gray.800">
+                          {keyword}
+                        </Text>
+                        <Text color="gray.500" fontSize="xs">
+                          {articles.length}건
+                        </Text>
+                      </Box>
+                      <AccordionIcon />
+                    </AccordionButton>
+                    <AccordionPanel px={2} pt={3} pb={1}>
                       <VStack
                         spacing={3}
                         align="stretch"
@@ -255,7 +316,7 @@ export function ScrapSidebar({
                         borderColor="purple.100"
                         pl={4}
                       >
-                        {keywordArticles.map((article) => (
+                        {articles.map((article) => (
                           <SortableArticleItem
                             key={getScrapKey(article)}
                             article={article}
@@ -264,12 +325,13 @@ export function ScrapSidebar({
                           />
                         ))}
                       </VStack>
-                    </SortableContext>
-                  </DndContext>
-                </AccordionPanel>
-              </AccordionItem>
-            ))}
-          </Accordion>
+                    </AccordionPanel>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+              </Box>
+            </SortableContext>
+          </DndContext>
         )}
       </Stack>
     </Box>

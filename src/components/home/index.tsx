@@ -175,14 +175,34 @@ export default function HomeClient() {
     });
   }, [scrapData]);
 
-  const handleReorderArticles = (
-    keyword: string,
-    reordered: ScrapArticle[],
+  const handleReorderAllArticles = (reordered: ScrapArticle[]) => {
+    setOrderedScrappedArticles(reordered);
+  };
+
+  const handleMoveToGroup = async (
+    originalArticle: ScrapArticle,
+    newKeyword: string,
+    newOrder: ScrapArticle[],
   ) => {
-    setOrderedScrappedArticles((prev) => {
-      const others = prev.filter((a) => a.keyword !== keyword);
-      return [...others, ...reordered];
-    });
+    setOrderedScrappedArticles(newOrder);
+
+    try {
+      const deleteRes = await fetch("/api/scraps", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(originalArticle),
+      });
+      if (!deleteRes.ok) throw new Error();
+
+      const postRes = await fetch("/api/scraps", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...originalArticle, keyword: newKeyword }),
+      });
+      if (!postRes.ok) throw new Error();
+    } catch {
+      await mutateScraps();
+    }
   };
 
   const keywords = keywordData?.keywords ?? [];
@@ -241,41 +261,26 @@ export default function HomeClient() {
     }
     return map;
   }, [filteredArticles]);
-  const scrappedArticleKeys = useMemo(
-    () => new Set(scrappedArticles.map((article) => getScrapKey(article))),
+  const scrappedUrls = useMemo(
+    () => new Set(scrappedArticles.map((article) => article.url)),
     [scrappedArticles],
-  );
-  const groupedScrappedArticles = useMemo(
-    () =>
-      Object.entries(
-        orderedScrappedArticles.reduce<Record<string, ScrapArticle[]>>(
-          (acc, article) => {
-            if (!acc[article.keyword]) {
-              acc[article.keyword] = [];
-            }
-
-            acc[article.keyword].push(article);
-            return acc;
-          },
-          {},
-        ),
-      ).sort(([leftKeyword], [rightKeyword]) =>
-        leftKeyword.localeCompare(rightKeyword, "ko"),
-      ),
-    [orderedScrappedArticles],
   );
 
   const handleToggleScrap = async (article: ScrapArticle | NewsArticle) => {
-    const payload: ScrapArticle = {
-      title: article.title,
-      url: article.url,
-      publishedAt: article.publishedAt,
-      keyword: article.keyword,
-    };
-    const scrapKey = getScrapKey(payload);
-    const isScrapped = scrappedArticleKeys.has(scrapKey);
+    const existingScrap = scrappedArticles.find((a) => a.url === article.url);
+    const isScrapped = Boolean(existingScrap);
 
-    setPendingScrapKey(scrapKey);
+    const payload: ScrapArticle = isScrapped && existingScrap
+      ? existingScrap
+      : {
+          title: article.title,
+          url: article.url,
+          publishedAt: article.publishedAt,
+          keyword: article.keyword,
+          source: "source" in article ? article.source : undefined,
+        };
+
+    setPendingScrapKey(article.url);
     setScrapErrorMessage(null);
 
     try {
@@ -589,15 +594,14 @@ export default function HomeClient() {
               isLoading={isLoading}
               hasError={Boolean(error)}
               scrapErrorMessage={scrapErrorMessage}
-              scrappedArticleKeys={scrappedArticleKeys}
+              scrappedUrls={scrappedUrls}
               pendingScrapKey={pendingScrapKey}
               relatedMap={relatedMap}
               onToggleScrap={handleToggleScrap}
             />
 
             <ScrapSidebar
-              groupedScrappedArticles={groupedScrappedArticles}
-              scrappedArticles={scrappedArticles}
+              orderedScrappedArticles={orderedScrappedArticles}
               isScrapLoading={isScrapLoading}
               pendingScrapKey={pendingScrapKey}
               larkErrorMessage={larkErrorMessage}
@@ -606,7 +610,8 @@ export default function HomeClient() {
               onOpenMailModal={openMailModal}
               onSendLark={handleSendScrapLark}
               onToggleScrap={handleToggleScrap}
-              onReorderArticles={handleReorderArticles}
+              onReorderAllArticles={handleReorderAllArticles}
+              onMoveToGroup={handleMoveToGroup}
             />
           </Stack>
         </MotionCard>

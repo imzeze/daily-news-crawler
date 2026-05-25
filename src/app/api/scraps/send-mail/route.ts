@@ -18,6 +18,7 @@ export async function POST(request: Request) {
       url: string;
       keyword: string;
       publishedAt: string;
+      source?: string;
     }>;
   };
   const emails = Array.isArray(payload.emails)
@@ -87,7 +88,7 @@ export async function POST(request: Request) {
                               ${article.title}
                             </a>
                             <div style="margin-top:4px;color:#64748b;font-size:12px;">
-                              ${new Intl.DateTimeFormat("ko-KR", {
+                              ${article.source ? `${article.source} · ` : ""}${new Intl.DateTimeFormat("ko-KR", {
                                 dateStyle: "medium",
                               }).format(new Date(article.publishedAt))}
                             </div>

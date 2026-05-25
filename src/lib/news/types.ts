@@ -18,4 +18,5 @@ export type ScrappedArticle = {
   url: string;
   publishedAt: string;
   keyword: string;
+  source?: string;
 };

@@ -20,13 +20,22 @@ function isValidScrapPayload(payload: unknown): payload is ScrappedArticle {
     typeof candidate.publishedAt === "string" &&
     candidate.publishedAt.trim().length > 0 &&
     typeof candidate.keyword === "string" &&
-    candidate.keyword.trim().length > 0
+    candidate.keyword.trim().length > 0 &&
+    (candidate.source === undefined || typeof candidate.source === "string")
   );
 }
 
 export async function GET() {
-  const result = await listScraps();
-  return NextResponse.json(result);
+  try {
+    const result = await listScraps();
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error("스크랩 목록 조회 실패:", error);
+    return NextResponse.json(
+      { message: "스크랩 목록을 불러오지 못했습니다." },
+      { status: 500 },
+    );
+  }
 }
 
 export async function POST(request: Request) {
@@ -39,8 +48,16 @@ export async function POST(request: Request) {
     );
   }
 
-  const articles = await addScrap(payload);
-  return NextResponse.json({ articles });
+  try {
+    const articles = await addScrap(payload);
+    return NextResponse.json({ articles });
+  } catch (error) {
+    console.error("스크랩 저장 실패:", error);
+    return NextResponse.json(
+      { message: "스크랩을 저장하지 못했습니다." },
+      { status: 500 },
+    );
+  }
 }
 
 export async function DELETE(request: Request) {
@@ -53,6 +70,14 @@ export async function DELETE(request: Request) {
     );
   }
 
-  const articles = await removeScrap(payload);
-  return NextResponse.json({ articles });
+  try {
+    const articles = await removeScrap(payload);
+    return NextResponse.json({ articles });
+  } catch (error) {
+    console.error("스크랩 삭제 실패:", error);
+    return NextResponse.json(
+      { message: "스크랩을 삭제하지 못했습니다." },
+      { status: 500 },
+    );
+  }
 }

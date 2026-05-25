@@ -21,6 +21,7 @@ export type ScrapArticle = {
   url: string;
   publishedAt: string;
   keyword: string;
+  source?: string;
 };
 
 export type ScrapResponse = {

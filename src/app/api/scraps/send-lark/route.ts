@@ -11,6 +11,7 @@ function buildLarkReportText(
     url: string;
     keyword: string;
     publishedAt: string;
+    source?: string;
   }>,
 ) {
   const grouped = articles.reduce<Record<string, typeof articles>>(
@@ -33,8 +34,11 @@ function buildLarkReportText(
           const publishedAt = new Intl.DateTimeFormat("ko-KR", {
             dateStyle: "medium",
           }).format(new Date(article.publishedAt));
+          const meta = article.source
+            ? `${article.source} · ${publishedAt}`
+            : publishedAt;
 
-          return `${index + 1}. ${article.title}\n${publishedAt}\n${article.url}`;
+          return `${index + 1}. ${article.title}\n${meta}\n${article.url}`;
         }),
       ].join("\n\n"),
     )
@@ -47,6 +51,7 @@ export async function POST(request: Request) {
     url: string;
     keyword: string;
     publishedAt: string;
+    source?: string;
   }>;
 
   try {
@@ -56,6 +61,7 @@ export async function POST(request: Request) {
         url: string;
         keyword: string;
         publishedAt: string;
+        source?: string;
       }>;
     };
     articles = Array.isArray(body?.articles) && body.articles.length > 0

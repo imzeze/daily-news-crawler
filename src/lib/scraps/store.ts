@@ -15,6 +15,7 @@ export async function listScraps() {
       url: article.url,
       publishedAt: article.publishedAt.toISOString(),
       keyword: article.keyword,
+      source: article.source ?? undefined,
     })),
     updatedAt: articles.length > 0 ? articles[0].createdAt.toISOString() : null,
   };
@@ -35,6 +36,7 @@ export async function addScrap(article: ScrappedArticle) {
         url: article.url,
         publishedAt: new Date(article.publishedAt),
         keyword: article.keyword,
+        source: article.source ?? null,
       },
     });
   }
