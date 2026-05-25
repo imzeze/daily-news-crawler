@@ -1,0 +1,1 @@
+ALTER TABLE "Scrap" ADD COLUMN "source" TEXT;
