@@ -17,14 +17,15 @@ import {
   Select,
   Stack,
   Text,
+  useDisclosure,
 } from "@chakra-ui/react";
-import { ArrowLeft, Plus } from "lucide-react";
+import { ArrowLeft, Plus, Settings2 } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
+import CategoryManagerModal from "@/components/keywords/CategoryManagerModal";
 
-const CATEGORY_OPTIONS = ["SAMG", "콘텐츠 산업", "구글 영문 검색"] as const;
-type KeywordCategory = (typeof CATEGORY_OPTIONS)[number];
+type KeywordCategory = string;
 
 type Keyword = {
   id: string;
@@ -37,30 +38,53 @@ type KeywordResponse = {
   keywords: Keyword[];
 };
 
+type CategoryRecord = {
+  id: string;
+  name: string;
+  order: number;
+};
+
+type CategoryResponse = {
+  categories: CategoryRecord[];
+};
+
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function KeywordsPage() {
   const { data, mutate, isLoading } = useSWR<KeywordResponse>(
     "/api/keywords",
     fetcher,
-    {
-      revalidateOnFocus: false,
-    },
+    { revalidateOnFocus: false },
   );
+  const { data: categoryData, mutate: mutateCategories } = useSWR<CategoryResponse>(
+    "/api/keyword-categories",
+    fetcher,
+    { revalidateOnFocus: false },
+  );
+  const { isOpen: isCategoryModalOpen, onOpen: openCategoryModal, onClose: closeCategoryModal } = useDisclosure();
   const [newKeyword, setNewKeyword] = useState("");
-  const [newCategory, setNewCategory] = useState<KeywordCategory>("SAMG");
+  const [newCategory, setNewCategory] = useState<KeywordCategory>("");
   const [errorMessage, setErrorMessage] = useState("");
   const [isSavingKeyword, setIsSavingKeyword] = useState(false);
 
+  const categories = categoryData?.categories ?? [];
   const keywords = data?.keywords ?? [];
   const groupedKeywords = useMemo(
     () =>
-      CATEGORY_OPTIONS.map((category) => ({
-        category,
-        keywords: keywords.filter((keyword) => keyword.category === category),
+      categories.map((cat) => ({
+        category: cat.name,
+        keywords: keywords.filter((keyword) => keyword.category === cat.name),
       })).filter((group) => group.keywords.length > 0),
-    [keywords],
+    [keywords, categories],
   );
+
+  const defaultCategory = categories[0]?.name ?? "";
+
+  useEffect(() => {
+    if (defaultCategory && !newCategory) {
+      setNewCategory(defaultCategory);
+    }
+  }, [defaultCategory, newCategory]);
 
   const handleAddKeyword = async () => {
     if (!newKeyword.trim()) {
@@ -87,7 +111,7 @@ export default function KeywordsPage() {
       }
 
       setNewKeyword("");
-      setNewCategory("SAMG");
+      setNewCategory(defaultCategory);
       await mutate();
     } finally {
       setIsSavingKeyword(false);
@@ -114,12 +138,31 @@ export default function KeywordsPage() {
           >
             메인으로 돌아가기
           </Button>
-          <Heading size="2xl">키워드 관리</Heading>
-          <Text color="gray.600" fontSize="lg">
-            메인 뉴스 수집에 사용하는 키워드를 직접 추가하고 삭제할 수
-            있습니다.
-          </Text>
+          <HStack justify="space-between" align="flex-start">
+            <Stack spacing={1}>
+              <Heading size="2xl">키워드 관리</Heading>
+              <Text color="gray.600" fontSize="lg">
+                메인 뉴스 수집에 사용하는 키워드를 직접 추가하고 삭제할 수
+                있습니다.
+              </Text>
+            </Stack>
+            <Button
+              variant="outline"
+              leftIcon={<Settings2 size={16} aria-hidden="true" />}
+              onClick={openCategoryModal}
+              flexShrink={0}
+            >
+              카테고리 관리
+            </Button>
+          </HStack>
         </Stack>
+
+        <CategoryManagerModal
+          isOpen={isCategoryModalOpen}
+          onClose={closeCategoryModal}
+          categories={categories}
+          onRefresh={mutateCategories}
+        />
 
         <Box className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <Stack spacing={4}>
@@ -133,9 +176,9 @@ export default function KeywordsPage() {
                     setNewCategory(event.target.value as KeywordCategory)
                   }
                 >
-                  {CATEGORY_OPTIONS.map((category) => (
-                    <option key={category} value={category}>
-                      {category}
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.name}>
+                      {cat.name}
                     </option>
                   ))}
                 </Select>
